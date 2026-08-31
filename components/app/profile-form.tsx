@@ -11,13 +11,12 @@ import {
 } from "@/app/(app)/profile/actions";
 
 type Props = {
-  email: string;
   fullName: string;
   phone: string;
   country: string;
 };
 
-export function ProfileForm({ email, fullName, phone, country }: Props) {
+export function ProfileForm({ fullName, phone, country }: Props) {
   const [state, formAction, pending] = useActionState<ProfileState, FormData>(
     updateProfile,
     {},
@@ -31,13 +30,7 @@ export function ProfileForm({ email, fullName, phone, country }: Props) {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" value={email} disabled readOnly />
-          <p className="text-xs text-muted-foreground">
-            Your email can&apos;t be changed here.
-          </p>
-        </div>
+        <p className="text-sm font-semibold">Your details</p>
         <div className="space-y-1.5">
           <Label htmlFor="fullName">Full name</Label>
           <Input
@@ -58,6 +51,9 @@ export function ProfileForm({ email, fullName, phone, country }: Props) {
             placeholder="+60…"
             disabled={pending}
           />
+          <p className="text-xs text-muted-foreground">
+            Used to pre-fill your booking details.
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="country">Country</Label>

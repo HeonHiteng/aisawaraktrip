@@ -199,6 +199,24 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ⏭️ Still queued: reviews/testimonials on experiences, admin desktop sidebar +
   proper charts (dataviz), per-day contextual refine, shared PriceBreakdown, dark-mode QA
 
+## QA pass (professional-tester review)
+
+- ✅ **Booking date default** — `BookingForm` now snaps the default date to the
+  first day that is both past the leadtime and on a weekday the experience runs
+  (`firstAvailableDate`). Form no longer opens disabled; removes an E2E flake.
+- ✅ **Chip a11y** — `aria-pressed` / `aria-selected` + `focus-visible` ring on
+  all toggle chips (plan interests/pace/budget, explore filters + tabs).
+- ✅ **Explore search** — `type="search"` + `aria-label` (was placeholder-only).
+- ✅ **Payment amount check** — `settlePayment` refuses to confirm a "paid"
+  callback whose amount ≠ the server-snapshotted `payment.amount`; +2 unit tests
+  (52 unit / 2 E2E / typecheck / lint green).
+- ⏳ **Trip status never reverts from `booked`** — cancelling every booking on a
+  trip leaves it `booked`. Needs a product call: auto-revert to `planned` vs.
+  keep. Not yet done.
+- ⏳ **Long trips go thin** — 10–14 day trips exhaust the 6-experience /
+  8-attraction demo pool, so late days repeat "Free afternoon". Options: lower
+  the cap (`lib/validation/trip.ts`, currently 14) or add more fixtures.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

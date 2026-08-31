@@ -34,10 +34,32 @@ Dark mode is fully defined; don't hard-code hex — use tokens.
 
 ## Shape & spacing
 
-- `--radius: 0.85rem`. Cards `rounded-2xl`, chips/buttons pill (`rounded-full`),
-  hero panels `rounded-3xl`.
-- Card: `rounded-2xl border border-border bg-card p-4/5`. Image-topped cards clip the image to the top corners.
+- `--radius: 0.85rem`. Cards `rounded-2xl`, inner blocks `rounded-xl`,
+  chips/buttons pill (`rounded-full`), hero panels `rounded-3xl`.
+- Card: `rounded-2xl border border-border bg-card shadow-card` + `p-4`.
+- **Elevation** (violet-tinted, in globals.css): `shadow-card` (resting cards),
+  `shadow-float` (hover / raised). Interactive cards:
+  `transition-all hover:-translate-y-0.5 hover:shadow-float`.
+- **Motion**: `.page-enter` (on `app/(app)/template.tsx`) fades content up on every
+  navigation; respects `prefers-reduced-motion`. Card hover lift + image
+  `group-hover:scale-105`.
 - Page gutters: `px-4`, content `max-w-2xl` (app) / `max-w-5xl` (marketing).
+
+## Key component patterns (v2)
+
+- **Catalogue card**: full-bleed photo (`h-44`) with a bottom `from-black/60`
+  scrim; badges are translucent pills on the image (`bg-black/45 backdrop-blur`);
+  price is overlaid bottom-right in bold white; body = title (2-line clamp) +
+  vendor row (`Avatar` + name) + meta line. No redundant "View" button — the
+  whole card is the link.
+- **Itinerary**: a real vertical timeline — a `w-px` spine at `left-[4.75rem]`,
+  each item a `size-8` dot (`ring-4 ring-card`) on the spine, time in the gutter,
+  the "Why" line in a `bg-primary/5` callout.
+- **Detail page**: title → "at a glance" 2×4 stat grid (`Glance` chips) → vendor
+  card → sectioned body (`## About`, `## What's included`, `## Good to know`) →
+  sticky price+CTA bar with `shadow-[0_-8px_20px_...]`.
+- **`Avatar`** (`components/common/avatar.tsx`): image when a usable src, else
+  initials on `bg-accent`.
 
 ## Components
 

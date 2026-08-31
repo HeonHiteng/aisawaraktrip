@@ -167,15 +167,37 @@
   --sidebar-ring: oklch(0.72 0.18 300);
 }
 
+@theme inline {
+  /* Elevation — soft, violet-tinted so shadows read as part of the brand */
+  --shadow-xs: 0 1px 2px oklch(0.4 0.1 293 / 0.06);
+  --shadow-sm:
+    0 1px 2px oklch(0.4 0.1 293 / 0.06), 0 2px 6px oklch(0.4 0.1 293 / 0.05);
+  --shadow-md:
+    0 2px 4px oklch(0.4 0.1 293 / 0.06), 0 8px 20px oklch(0.4 0.1 293 / 0.08);
+  --shadow-lg:
+    0 4px 8px oklch(0.4 0.1 293 / 0.06), 0 18px 40px oklch(0.4 0.1 293 / 0.12);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
 
@@ -190,8 +212,41 @@
     background-clip: text;
     color: transparent;
   }
-  /* Dark-violet hero surface (landing hero, page headers) */
+  /* Dark-violet hero surface — reserve for the landing hero + app header */
   .bg-brand-hero {
     background-image: var(--brand-hero);
+  }
+
+  /* Card elevation language */
+  .shadow-card {
+    box-shadow: var(--shadow-sm);
+  }
+  .shadow-float {
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* One place to set page-content entrance motion */
+  .page-enter {
+    animation: page-enter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-enter,
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

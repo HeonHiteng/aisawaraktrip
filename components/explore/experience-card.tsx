@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { BadgeCheck, MapPin } from "lucide-react";
+import { BadgeCheck, MapPin, Star } from "lucide-react";
 import { CoverImage } from "@/components/explore/cover-image";
 import { SampleBadge } from "@/components/common/sample-badge";
-import { Rating } from "@/components/explore/rating";
+import { Avatar } from "@/components/common/avatar";
 import { formatMYR } from "@/lib/format";
 import type { Experience } from "@/types/catalogue";
 
@@ -13,53 +13,62 @@ export function ExperienceCard({ experience }: { experience: Experience }) {
   return (
     <Link
       href={`/explore/experiences/${experience.slug}`}
-      className="group block overflow-hidden rounded-2xl border border-border bg-card transition-shadow hover:shadow-lg hover:shadow-primary/5"
+      className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float"
     >
-      <div className="relative h-40 w-full bg-muted">
+      <div className="relative h-44 w-full bg-muted">
         <CoverImage
           url={img?.url}
           alt={img?.alt ?? experience.title}
           category={experience.categories[0]}
           seed={experience.slug}
-          className="transition-transform duration-300 group-hover:scale-[1.03]"
+          className="transition-transform duration-500 group-hover:scale-105"
         />
+        {/* legibility scrim */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 to-transparent" />
+
         {verified && (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-brand-gradient px-2 py-1 text-[11px] font-semibold text-white">
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
             <BadgeCheck className="size-3.5" />
             Verified
           </span>
         )}
+        {experience.rating != null && (
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-foreground">
+            <Star className="size-3 fill-amber-400 text-amber-400" />
+            {experience.rating.toFixed(1)}
+          </span>
+        )}
         {experience.isSample && <SampleBadge />}
+
+        <p className="absolute bottom-3 right-3 text-right text-white">
+          <span className="text-[11px] opacity-80">from </span>
+          <span className="text-base font-bold">
+            {formatMYR(experience.pricePerPerson)}
+          </span>
+        </p>
       </div>
 
-      <div className="space-y-2 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-snug">{experience.title}</h3>
+      <div className="space-y-2.5 p-4">
+        <h3 className="line-clamp-2 font-semibold leading-snug">
+          {experience.title}
+        </h3>
+
+        <div className="flex items-center gap-2">
+          <Avatar
+            name={experience.vendor.name}
+            src={experience.vendor.avatarUrl}
+            className="size-6"
+          />
+          <span className="truncate text-xs text-muted-foreground">
+            {experience.vendor.name}
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="size-3.5" />
-            {experience.location?.name ?? "Sarawak"}
-          </span>
-          <Rating value={experience.rating} count={experience.reviewCount} />
-        </div>
-
-        <p className="line-clamp-2 text-sm text-muted-foreground">
-          {experience.summary}
-        </p>
-
-        <div className="flex items-end justify-between pt-1">
-          <p className="text-sm">
-            <span className="text-muted-foreground">from </span>
-            <span className="font-semibold">
-              {formatMYR(experience.pricePerPerson)}
-            </span>
-            <span className="text-muted-foreground"> /person</span>
-          </p>
-          <span className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-            View
-          </span>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="size-3.5" />
+          {experience.location?.name ?? "Sarawak"}
+          <span className="text-border">·</span>
+          {experience.reviewCount} reviews
         </div>
       </div>
     </Link>

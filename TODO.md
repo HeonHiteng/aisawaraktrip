@@ -183,6 +183,22 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ **Booking date validated against availability** (server + inline client warning) — was a real gap
 - ✅ 50 unit tests, 2 E2E, build all green
 
+## Design pass 2 (visual craft)
+
+- ✅ Design-system v2 in `globals.css`: violet-tinted elevation tokens
+  (`shadow-card` / `shadow-float`), `.page-enter` navigation motion
+  (reduced-motion aware), balanced headings, smoothed type
+- ✅ **Catalogue cards** redesigned — photo-forward with scrim, price overlay,
+  rating pill, vendor `Avatar` + name row, no redundant "View"
+- ✅ **Itinerary** rebuilt as a real vertical timeline (spine + dots + time
+  gutter + "Why" callouts, circled day numbers)
+- ✅ **Experience detail** — "at a glance" stat grid, vendor card, sectioned
+  body, prominent sticky price+CTA
+- ✅ `components/common/avatar.tsx`; swapped 3 mismatched demo photos
+- ✅ 50 unit / 2 E2E / build green
+- ⏭️ Still queued: reviews/testimonials on experiences, admin desktop sidebar +
+  proper charts (dataviz), per-day contextual refine, shared PriceBreakdown, dark-mode QA
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

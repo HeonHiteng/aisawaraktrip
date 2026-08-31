@@ -19,8 +19,8 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
   // --- generate an itinerary (form defaults are valid) ---
   await page.getByRole("button", { name: "Generate my trip" }).click();
   await page.waitForURL(/\/trips\/[a-z0-9]+$/, { timeout: 20_000 });
-  await expect(page.getByText(/Day 1/)).toBeVisible();
   await expect(page.getByText("AI-generated")).toBeVisible();
+  await expect(page.getByText("Refine with AI")).toBeVisible();
 
   // --- refine it ---
   await page.getByRole("button", { name: "Make it cheaper" }).click();

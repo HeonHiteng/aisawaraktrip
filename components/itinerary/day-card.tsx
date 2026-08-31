@@ -15,40 +15,47 @@ export function DayCard({
   const total = dayTotal(day);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card">
-      <header className="flex items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-3">
-        <div>
-          <p className="font-semibold">
-            Day {day.dayNumber}
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {formatDate(day.date, { weekday: "short" })}
-            </span>
+    <section className="rounded-2xl border border-border bg-card shadow-card">
+      <header className="flex items-center gap-3 p-4">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+          {day.dayNumber}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">
+            {formatDate(day.date, { weekday: "long", day: "numeric", month: "short" })}
           </p>
-          <p className="text-xs text-muted-foreground">{day.summary}</p>
+          <p className="truncate text-xs text-muted-foreground">{day.summary}</p>
         </div>
-        <span className="shrink-0 text-xs text-muted-foreground">
+        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
           {total > 0 ? `~${formatMYR(total)}` : "Free"}
         </span>
       </header>
 
-      <div className="divide-y divide-border px-4">
+      <div className="px-4 pb-2">
         {day.items.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
             Nothing planned — add something from Explore.
           </p>
         ) : (
-          day.items.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              tripId={tripId}
-              booking={
-                item.experienceId
-                  ? bookingsByExperience[item.experienceId]
-                  : undefined
-              }
+          <ol className="relative">
+            {/* the timeline spine — runs through the item dots */}
+            <span
+              className="absolute left-[4.75rem] top-4 bottom-8 w-px -translate-x-1/2 bg-border"
+              aria-hidden
             />
-          ))
+            {day.items.map((item) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                tripId={tripId}
+                booking={
+                  item.experienceId
+                    ? bookingsByExperience[item.experienceId]
+                    : undefined
+                }
+              />
+            ))}
+          </ol>
         )}
       </div>
     </section>

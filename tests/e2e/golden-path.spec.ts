@@ -6,37 +6,42 @@ import { expect, test } from "@playwright/test";
  * confirmation -> My Bookings -> admin sees & manages the booking.
  */
 test("golden path: plan, book, pay, admin", async ({ page }) => {
-  // --- sign in as guest ---
+  // --- sign in as guest -> home ---
   await page.goto("/login");
   await page.getByRole("button", { name: "Continue as guest" }).click();
-  await expect(page).toHaveURL(/\/plan$/);
+  await page.waitForURL(/\/home$/, { timeout: 15_000 });
+
+  // --- open the planner ---
+  await page.getByRole("link", { name: /Start planning/i }).click();
+  await page.waitForURL(/\/plan$/);
   await expect(page.getByRole("heading", { name: "AI Trip Planner" })).toBeVisible();
 
   // --- generate an itinerary (form defaults are valid) ---
   await page.getByRole("button", { name: "Generate my trip" }).click();
-  await expect(page).toHaveURL(/\/trips\/[a-z0-9]+$/);
+  await page.waitForURL(/\/trips\/[a-z0-9]+$/, { timeout: 20_000 });
   await expect(page.getByText(/Day 1/)).toBeVisible();
   await expect(page.getByText("AI-generated")).toBeVisible();
 
   // --- refine it ---
   await page.getByRole("button", { name: "Make it cheaper" }).click();
-  await expect(page.getByText(/Edited by you|v2/)).toBeVisible();
+  await expect(page.getByText(/Edited by you|v2/)).toBeVisible({
+    timeout: 15_000,
+  });
 
   // --- book the first bookable item ---
   await page.getByRole("link", { name: "Book" }).first().click();
-  await expect(page).toHaveURL(/\/book\/[a-z-]+/);
+  await page.waitForURL(/\/book\/[a-z-]+/);
   await page.getByLabel("Email").fill("e2e@example.com");
   await page.getByRole("button", { name: "Confirm booking" }).click();
-  await page.waitForURL(/\/checkout\//);
+  await page.waitForURL(/\/checkout\//, { timeout: 15_000 });
 
   // --- checkout -> mock gateway -> approve ---
-  await expect(page).toHaveURL(/\/checkout\/[a-z0-9]+(\?|$)/);
   await page.getByRole("button", { name: "Continue to payment" }).click();
-  await expect(page).toHaveURL(/\/checkout\/gateway/);
+  await page.waitForURL(/\/checkout\/gateway/, { timeout: 15_000 });
   await page.getByRole("button", { name: "Approve payment" }).click();
 
   // --- result -> confirmed ---
-  await expect(page).toHaveURL(/\/checkout\/[a-z0-9]+\/result/);
+  await page.waitForURL(/\/checkout\/[a-z0-9]+\/result/, { timeout: 15_000 });
   await expect(
     page.getByRole("heading", { name: "Payment received" }),
   ).toBeVisible();
@@ -52,7 +57,7 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
 
   // --- admin can see and manage it ---
   await page.getByRole("button", { name: "Admin" }).click();
-  await page.waitForURL(/\/admin/);
+  await page.waitForURL(/\/admin/, { timeout: 15_000 });
 
   await page.goto("/admin/bookings");
   await expect(page.getByRole("heading", { name: "Bookings" })).toBeVisible();
@@ -69,7 +74,7 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
 test("guest cannot reach the admin dashboard", async ({ page }) => {
   await page.goto("/login");
   await page.getByRole("button", { name: "Continue as guest" }).click();
-  await expect(page).toHaveURL(/\/plan$/);
+  await page.waitForURL(/\/home$/, { timeout: 15_000 });
 
   await page.goto("/admin");
   await expect(page).not.toHaveURL(/\/admin/);

@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   Compass,
-  Sparkles,
+  House,
   Ticket,
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/plan", label: "Plan", icon: Sparkles },
+  { href: "/home", label: "Home", icon: House },
   { href: "/explore", label: "Explore", icon: Compass },
   { href: "/trips", label: "Trips", icon: CalendarDays },
   { href: "/bookings", label: "Bookings", icon: Ticket },
@@ -26,7 +26,10 @@ export function AppNav() {
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur">
       <ul className="mx-auto flex max-w-2xl items-stretch justify-around">
         {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const active =
+            pathname === href ||
+            pathname.startsWith(`${href}/`) ||
+            (href === "/home" && pathname.startsWith("/plan"));
           return (
             <li key={href} className="flex-1">
               <Link

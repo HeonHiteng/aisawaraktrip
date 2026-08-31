@@ -8,7 +8,7 @@ export function AppHeader({ name }: { name?: string | null }) {
   return (
     <header className="sticky top-0 z-40 bg-brand-hero text-white">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-        <Link href="/plan" className="flex items-center gap-2 font-semibold">
+        <Link href="/home" className="flex items-center gap-2 font-semibold">
           <span className="grid size-7 place-items-center rounded-lg bg-white/15 text-sm font-bold">
             S
           </span>

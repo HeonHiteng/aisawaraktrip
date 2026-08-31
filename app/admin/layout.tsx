@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: LayoutProps<"/">) {
           </Link>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="hidden sm:inline">{profile.full_name ?? "Admin"}</span>
-            <Link href="/plan" className="hover:text-foreground">
+            <Link href="/home" className="hover:text-foreground">
               Exit to app
             </Link>
             <form action={signOut}>

@@ -42,7 +42,7 @@ async function authThrottle(): Promise<AuthState | null> {
 async function enterDemo(persona: DemoPersona): Promise<never> {
   await setDemoUser(persona);
   revalidatePath("/", "layout");
-  redirect(persona === "admin" ? "/admin" : "/plan");
+  redirect(persona === "admin" ? "/admin" : "/home");
 }
 
 export async function login(
@@ -65,7 +65,7 @@ export async function login(
   if (error) return { error: "Email or password is incorrect." };
 
   revalidatePath("/", "layout");
-  redirect("/plan");
+  redirect("/home");
 }
 
 export async function register(
@@ -99,7 +99,7 @@ export async function register(
 
   if (data.session) {
     revalidatePath("/", "layout");
-    redirect("/plan");
+    redirect("/home");
   }
   return { message: "Check your email to confirm your account, then sign in." };
 }
@@ -125,7 +125,7 @@ export async function continueAsGuest(
   }
 
   revalidatePath("/", "layout");
-  redirect("/plan");
+  redirect("/home");
 }
 
 /** Demo-only: jump between the guest / traveller / admin views. */

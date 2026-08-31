@@ -7,6 +7,6 @@ import { register } from "@/app/(auth)/actions";
 export const metadata: Metadata = { title: "Create account" };
 
 export default async function RegisterPage() {
-  if (await getUser()) redirect("/plan");
+  if (await getUser()) redirect("/home");
   return <AuthForm mode="register" action={register} />;
 }

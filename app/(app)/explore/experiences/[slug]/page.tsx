@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { CoverImage } from "@/components/explore/cover-image";
+import { SampleBadge } from "@/components/common/sample-badge";
 import { Rating } from "@/components/explore/rating";
 import { CategoryBadges } from "@/components/explore/category-badges";
 import { getExperience } from "@/lib/domain/catalogue";
@@ -45,7 +46,7 @@ export default async function ExperiencePage({
         Explore
       </Link>
 
-      <div className="relative h-56 w-full overflow-hidden rounded-2xl bg-muted">
+      <div className="relative h-60 w-full overflow-hidden rounded-2xl bg-muted sm:h-72">
         <CoverImage
           url={img?.url}
           alt={img?.alt ?? exp.title}
@@ -53,11 +54,7 @@ export default async function ExperiencePage({
           seed={exp.slug}
           priority
         />
-        {exp.isSample && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
-            Sample data
-          </span>
-        )}
+        {exp.isSample && <SampleBadge />}
       </div>
 
       <div className="space-y-2">

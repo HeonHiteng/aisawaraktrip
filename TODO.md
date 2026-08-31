@@ -173,6 +173,16 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ Verified: prod build (`next start`) serves `/`, `/privacy`, `/terms`, `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, 404
 - 🚫 Founder: import the repo at vercel.com → Deploy (runs in demo mode with zero env vars)
 
+## UX pass (post-Phase-10)
+
+- ✅ **Real photos** — 15 bundled in `/public/demo`, wired into fixtures; cards + detail heroes now use them (gradient fallback stays for anything without an image)
+- ✅ **Conversational planner** — "Describe your trip" box → `lib/plan/parse-prompt.ts` (tested) pre-fills the form
+- ✅ **Generation progress** — full-screen `GeneratingOverlay` with staged messages while the itinerary builds
+- ✅ **Plan → book loop closes** — itinerary items show "Booked"/"Reserved"; trip → `booked` on payment; `TripReadiness` "X of Y booked" bar
+- ✅ Toasts (refine, profile), `loading.tsx` skeletons (explore/trips/bookings/trip detail), budget presets, softer `SampleBadge`, login-card seam removed, booking email hint, hero contrast bumped
+- ✅ **Booking date validated against availability** (server + inline client warning) — was a real gap
+- ✅ 50 unit tests, 2 E2E, build all green
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

@@ -10,10 +10,13 @@ import {
 import { BudgetBar } from "@/components/itinerary/budget-bar";
 import { DayCard } from "@/components/itinerary/day-card";
 import { RefineBox } from "@/components/itinerary/refine-box";
+import { TripReadiness } from "@/components/itinerary/trip-readiness";
 import { requireUser } from "@/lib/auth";
+import { bookingsForTrip } from "@/lib/domain/bookings";
 import { getTrip } from "@/lib/domain/trips";
 import { formatDateRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { BookingStatus } from "@/types/booking";
 import { itineraryTotal, tripNights } from "@/types/trip";
 import {
   deleteTripAction,
@@ -40,6 +43,23 @@ export default async function TripDetailPage({
   const nights = tripNights(trip);
   const pax = trip.numAdults + trip.numChildren;
   const estimated = itineraryTotal(trip.itinerary);
+
+  const bookings = await bookingsForTrip(user.id, trip.id);
+  const bookingsByExperience: Record<
+    string,
+    { id: string; status: BookingStatus }
+  > = {};
+  for (const b of bookings) {
+    bookingsByExperience[b.experienceId] = { id: b.id, status: b.status };
+  }
+  const bookableExpIds = new Set(
+    trip.itinerary?.days.flatMap((d) =>
+      d.items.filter((i) => i.bookable && i.experienceId).map((i) => i.experienceId!),
+    ) ?? [],
+  );
+  const bookedCount = [...bookableExpIds].filter(
+    (id) => bookingsByExperience[id],
+  ).length;
 
   return (
     <div className="space-y-5">
@@ -72,7 +92,7 @@ export default async function TripDetailPage({
           </span>
         </div>
         {trip.itinerary && (
-          <p className="mt-2 text-xs text-white/55">
+          <p className="mt-2 text-xs text-white/70">
             {trip.itinerary.generatedBy === "ai"
               ? "AI-generated"
               : "Edited by you"}{" "}
@@ -89,11 +109,20 @@ export default async function TripDetailPage({
 
       {trip.itinerary ? (
         <>
+          {bookableExpIds.size > 0 && (
+            <TripReadiness booked={bookedCount} total={bookableExpIds.size} />
+          )}
+
           <RefineBox tripId={trip.id} />
 
           <div className="space-y-4">
             {trip.itinerary.days.map((day) => (
-              <DayCard key={day.dayNumber} day={day} tripId={trip.id} />
+              <DayCard
+                key={day.dayNumber}
+                day={day}
+                tripId={trip.id}
+                bookingsByExperience={bookingsByExperience}
+              />
             ))}
           </div>
 

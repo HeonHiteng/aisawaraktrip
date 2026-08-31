@@ -61,7 +61,7 @@ export default function LandingPage() {
                 Browse experiences
               </Link>
             </div>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-white/65">
               MVP preview · attractions and vendors shown are demo data
             </p>
           </div>

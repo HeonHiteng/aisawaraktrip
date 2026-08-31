@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, MapPin, Ticket } from "lucide-react";
 import { CategoryBadges } from "@/components/explore/category-badges";
 import { CoverImage } from "@/components/explore/cover-image";
+import { SampleBadge } from "@/components/common/sample-badge";
 import { getAttraction } from "@/lib/domain/catalogue";
 import { formatDuration, formatMYR } from "@/lib/format";
 
@@ -41,7 +42,7 @@ export default async function AttractionPage({
         Explore
       </Link>
 
-      <div className="relative h-56 w-full overflow-hidden rounded-2xl bg-muted">
+      <div className="relative h-60 w-full overflow-hidden rounded-2xl bg-muted sm:h-72">
         <CoverImage
           url={img?.url}
           alt={img?.alt ?? att.name}
@@ -49,11 +50,7 @@ export default async function AttractionPage({
           seed={att.slug}
           priority
         />
-        {att.isSample && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
-            Sample data
-          </span>
-        )}
+        {att.isSample && <SampleBadge />}
       </div>
 
       <div className="space-y-2">

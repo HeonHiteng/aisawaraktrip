@@ -44,29 +44,23 @@ const loc = {
 
 export const demoLocations: LocationRef[] = Object.values(loc);
 
+// Demo photos bundled in /public/demo (swapped for owned assets / Supabase
+// Storage once real). Local paths need no next.config remotePatterns.
 const IMG = {
-  waterfront:
-    "https://images.unsplash.com/photo-1591017403286-fd8493524e1e?w=1200&q=70",
-  rainforest:
-    "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1200&q=70",
-  orangutan:
-    "https://images.unsplash.com/photo-1605552055839-6d5c2f7d0a2a?w=1200&q=70",
-  streetFood:
-    "https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=1200&q=70",
-  cruise:
-    "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200&q=70",
-  kayak:
-    "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200&q=70",
-  temple:
-    "https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?w=1200&q=70",
-  longhouse:
-    "https://images.unsplash.com/photo-1518509562904-e7ef99cdcc86?w=1200&q=70",
-  market:
-    "https://images.unsplash.com/photo-1555921015-5532091f6026?w=1200&q=70",
-  museum:
-    "https://images.unsplash.com/photo-1566127992631-137a642a90f4?w=1200&q=70",
-  cooking:
-    "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=1200&q=70",
+  waterfront: "/demo/waterfront.jpg",
+  rainforest: "/demo/rainforest.jpg",
+  orangutan: "/demo/orangutan.jpg",
+  proboscis: "/demo/proboscis.jpg",
+  streetFood: "/demo/streetfood.jpg",
+  cruise: "/demo/rivercruise.jpg",
+  kayak: "/demo/kayak.jpg",
+  temple: "/demo/temple.jpg",
+  fort: "/demo/fort.jpg",
+  longhouse: "/demo/longhouse.jpg",
+  chinatown: "/demo/chinatown.jpg",
+  museum: "/demo/museum.jpg",
+  cooking: "/demo/cooking.jpg",
+  jungleTrail: "/demo/jungle-trail.jpg",
 };
 
 export const demoAttractions: Attraction[] = [
@@ -136,7 +130,7 @@ export const demoAttractions: Attraction[] = [
     openingHours: { tue_sun: "09:30–16:45", mon: "Closed" },
     tips: "Take the tambang (river boat) across — it's part of the fun.",
     categories: ["heritage", "culture"],
-    images: [{ url: IMG.temple, alt: "Historic fort" }],
+    images: [{ url: IMG.fort, alt: "Historic white fort" }],
     isSample: true,
     isPublished: true,
   },
@@ -206,7 +200,7 @@ export const demoAttractions: Attraction[] = [
     openingHours: { daily: "08:00–17:00 (day visit)" },
     tips: "Book the boat and park permit ahead in peak season.",
     categories: ["nature", "wildlife", "adventure"],
-    images: [{ url: IMG.rainforest, alt: "Rainforest canopy in Borneo" }],
+    images: [{ url: IMG.proboscis, alt: "Proboscis monkey in Bako" }],
     isSample: true,
     isPublished: true,
   },
@@ -253,7 +247,7 @@ export const demoAttractions: Attraction[] = [
     openingHours: { most_shops: "10:00–18:00" },
     tips: "Haggle politely; cash is king in the smaller shops.",
     categories: ["shopping", "heritage"],
-    images: [{ url: IMG.market, alt: "Heritage shophouse street" }],
+    images: [{ url: IMG.chinatown, alt: "Heritage shophouse street" }],
     isSample: true,
     isPublished: true,
   },
@@ -498,7 +492,7 @@ export const demoExperiences: Experience[] = [
     },
     bookingLeadtimeHours: 48,
     categories: ["nature", "wildlife", "adventure"],
-    images: [{ url: IMG.rainforest, alt: "Rainforest trail" }],
+    images: [{ url: IMG.jungleTrail, alt: "Guided rainforest trail" }],
     rating: 4.9,
     reviewCount: 152,
     isSample: true,
@@ -575,7 +569,7 @@ export const demoExperiences: Experience[] = [
     },
     bookingLeadtimeHours: 48,
     categories: ["culture", "heritage"],
-    images: [{ url: IMG.longhouse, alt: "Bidayuh longhouse" }],
+    images: [{ url: IMG.rainforest, alt: "Jungle waterfall walk near Annah Rais" }],
     rating: 4.9,
     reviewCount: 88,
     isSample: true,

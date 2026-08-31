@@ -2,12 +2,23 @@ import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { demoStoreFor } from "@/lib/demo/store";
 import { getExperienceById } from "@/lib/domain/catalogue";
+import { weekdayKey } from "@/lib/format";
 import {
   priceBooking,
   type Booking,
   type BookingInput,
   type BookingStatus,
 } from "@/types/booking";
+
+const DAY_NAME: Record<string, string> = {
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+};
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -20,6 +31,18 @@ export async function listBookings(userId: string): Promise<Booking[]> {
     );
   }
   return []; // TODO(phase-6): supabase select from bookings
+}
+
+export async function bookingsForTrip(
+  userId: string,
+  tripId: string,
+): Promise<Booking[]> {
+  if (DEMO_MODE) {
+    return demoStoreFor(userId).bookings.filter(
+      (b) => b.tripId === tripId && b.status !== "cancelled",
+    );
+  }
+  return [];
 }
 
 export async function getBooking(
@@ -46,6 +69,19 @@ export async function createBooking(
     return {
       error: `This experience takes ${experience.minPax}–${experience.maxPax} people.`,
     };
+  }
+
+  const days = experience.availability.days ?? [];
+  const picked = weekdayKey(input.bookingDate);
+  if (days.length && !days.includes(picked)) {
+    return {
+      error: `This experience doesn't run on ${DAY_NAME[picked] ?? "that day"}. It runs ${days.map((d) => DAY_NAME[d] ?? d).join(", ")}.`,
+    };
+  }
+
+  const times = experience.availability.times ?? [];
+  if (times.length && !times.includes(input.startTime)) {
+    return { error: "Pick one of the listed start times." };
   }
 
   // Price is snapshotted server-side from the catalogue — never trusted from the client.

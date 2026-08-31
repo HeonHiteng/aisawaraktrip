@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Check,
   Coffee,
   Compass,
   Landmark,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatMYR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { BookingStatus } from "@/types/booking";
 import type { ItineraryItem } from "@/types/trip";
 import { removeTripItem } from "@/app/(app)/trips/actions";
 
@@ -24,9 +26,11 @@ const ICON = {
 export function ItemRow({
   item,
   tripId,
+  booking,
 }: {
   item: ItineraryItem;
   tripId: string;
+  booking?: { id: string; status: BookingStatus };
 }) {
   const Icon = ICON[item.type];
 
@@ -84,15 +88,30 @@ export function ItemRow({
                 ? `~${formatMYR(item.estimatedCost)}`
                 : "Free"}
             </span>
-            {item.bookable && item.experienceId && (
-              <Link
-                href={`/book/${item.experienceId}?trip=${tripId}`}
-                className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
-              >
-                <Ticket className="size-3" />
-                Book
-              </Link>
-            )}
+            {item.bookable &&
+              item.experienceId &&
+              (booking ? (
+                <Link
+                  href={`/bookings/${booking.id}`}
+                  className={cn(
+                    "ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold",
+                    booking.status === "confirmed"
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                      : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+                  )}
+                >
+                  <Check className="size-3" />
+                  {booking.status === "confirmed" ? "Booked" : "Reserved"}
+                </Link>
+              ) : (
+                <Link
+                  href={`/book/${item.experienceId}?trip=${tripId}`}
+                  className="ml-auto inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 font-semibold text-primary-foreground"
+                >
+                  <Ticket className="size-3" />
+                  Book
+                </Link>
+              ))}
           </div>
         </div>
       </div>

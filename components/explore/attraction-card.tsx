@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 import { CoverImage } from "@/components/explore/cover-image";
+import { SampleBadge } from "@/components/common/sample-badge";
 import { formatDuration, formatMYR } from "@/lib/format";
 import type { Attraction } from "@/types/catalogue";
 
@@ -25,11 +26,7 @@ export function AttractionCard({ attraction }: { attraction: Attraction }) {
           seed={attraction.slug}
           className="transition-transform duration-300 group-hover:scale-[1.03]"
         />
-        {attraction.isSample && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
-            Sample data
-          </span>
-        )}
+        {attraction.isSample && <SampleBadge />}
       </div>
       <div className="space-y-2 p-4">
         <h3 className="font-semibold leading-snug">{attraction.name}</h3>

@@ -2,6 +2,7 @@ import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { demoStoreFor } from "@/lib/demo/store";
 import { getBooking, setBookingStatus } from "@/lib/domain/bookings";
+import { setTripStatus } from "@/lib/domain/trips";
 import { getPaymentProvider } from "@/lib/payments";
 import { sendBookingConfirmation } from "@/lib/email";
 import type { Payment, PaymentMethod } from "@/types/payment";
@@ -98,7 +99,12 @@ export async function settlePayment(
     if (result.status === "paid") {
       await setBookingStatus(userId, payment.bookingId, "confirmed");
       const booking = await getBooking(userId, payment.bookingId);
-      if (booking) await sendBookingConfirmation(booking);
+      if (booking) {
+        await sendBookingConfirmation(booking);
+        if (booking.tripId) {
+          await setTripStatus(userId, booking.tripId, "booked");
+        }
+      }
     }
   }
 

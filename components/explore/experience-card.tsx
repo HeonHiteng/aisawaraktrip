@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BadgeCheck, MapPin } from "lucide-react";
 import { CoverImage } from "@/components/explore/cover-image";
+import { SampleBadge } from "@/components/common/sample-badge";
 import { Rating } from "@/components/explore/rating";
 import { formatMYR } from "@/lib/format";
 import type { Experience } from "@/types/catalogue";
@@ -28,11 +29,7 @@ export function ExperienceCard({ experience }: { experience: Experience }) {
             Verified
           </span>
         )}
-        {experience.isSample && (
-          <span className="absolute right-3 top-3 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white">
-            Sample data
-          </span>
-        )}
+        {experience.isSample && <SampleBadge />}
       </div>
 
       <div className="space-y-2 p-4">

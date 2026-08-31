@@ -1,13 +1,16 @@
 import { ItemRow } from "@/components/itinerary/item-row";
 import { formatDate, formatMYR } from "@/lib/format";
+import type { BookingStatus } from "@/types/booking";
 import { dayTotal, type ItineraryDay } from "@/types/trip";
 
 export function DayCard({
   day,
   tripId,
+  bookingsByExperience,
 }: {
   day: ItineraryDay;
   tripId: string;
+  bookingsByExperience: Record<string, { id: string; status: BookingStatus }>;
 }) {
   const total = dayTotal(day);
 
@@ -35,7 +38,16 @@ export function DayCard({
           </p>
         ) : (
           day.items.map((item) => (
-            <ItemRow key={item.id} item={item} tripId={tripId} />
+            <ItemRow
+              key={item.id}
+              item={item}
+              tripId={tripId}
+              booking={
+                item.experienceId
+                  ? bookingsByExperience[item.experienceId]
+                  : undefined
+              }
+            />
           ))
         )}
       </div>

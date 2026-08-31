@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { formatMYR, formatDays } from "@/lib/format";
+import { formatMYR, formatDays, weekdayKey } from "@/lib/format";
 import { priceBooking } from "@/types/booking";
 import { submitBooking, type BookState } from "@/app/(app)/book/actions";
 
@@ -36,6 +36,15 @@ export function BookingForm(props: Props) {
   );
   const [adults, setAdults] = useState(Math.max(props.minPax, 2));
   const [children, setChildren] = useState(0);
+  const [date, setDate] = useState(isoIn(Math.max(props.leadtimeHours, 72)));
+
+  const dateWarning =
+    props.availableDays.length &&
+    !props.availableDays.includes(weekdayKey(date))
+      ? `Not available on ${new Date(date).toLocaleDateString("en-MY", {
+          weekday: "long",
+        })} — runs ${formatDays(props.availableDays)}.`
+      : null;
 
   const pax = adults + children;
   const price = useMemo(
@@ -65,9 +74,11 @@ export function BookingForm(props: Props) {
               name="bookingDate"
               type="date"
               min={isoIn(props.leadtimeHours)}
-              defaultValue={isoIn(Math.max(props.leadtimeHours, 72))}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
               required
               disabled={pending}
+              aria-invalid={!!dateWarning}
             />
           </div>
           <div className="space-y-1.5">
@@ -87,11 +98,15 @@ export function BookingForm(props: Props) {
             </select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Runs {formatDays(props.availableDays)}. Book at least{" "}
-          {Math.round(props.leadtimeHours / 24) || 1} day
-          {props.leadtimeHours > 24 ? "s" : ""} ahead.
-        </p>
+        {dateWarning ? (
+          <p className="text-xs text-destructive">{dateWarning}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Runs {formatDays(props.availableDays)}. Book at least{" "}
+            {Math.round(props.leadtimeHours / 24) || 1} day
+            {props.leadtimeHours > 24 ? "s" : ""} ahead.
+          </p>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Stepper
@@ -134,9 +149,13 @@ export function BookingForm(props: Props) {
               name="customerEmail"
               type="email"
               defaultValue={props.defaultEmail}
+              placeholder="you@email.com"
               required
               disabled={pending}
             />
+            <p className="text-[11px] text-muted-foreground">
+              Your booking confirmation goes here.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="customerPhone">Phone</Label>
@@ -188,7 +207,7 @@ export function BookingForm(props: Props) {
 
       <Button
         type="submit"
-        disabled={pending || !!paxError}
+        disabled={pending || !!paxError || !!dateWarning}
         size="lg"
         className="w-full bg-brand-gradient text-white"
       >

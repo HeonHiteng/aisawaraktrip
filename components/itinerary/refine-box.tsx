@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { Sparkles, Wand2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,10 @@ export function RefineBox({ tripId }: { tripId: string }) {
   useEffect(() => {
     if (state.note && !state.error) {
       router.refresh();
+      toast.success("Itinerary updated", { description: state.note });
       if (inputRef.current) inputRef.current.value = "";
     }
+    if (state.error) toast.error(state.error);
   }, [state, router]);
 
   return (

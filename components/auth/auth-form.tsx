@@ -10,7 +10,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -104,26 +103,24 @@ export function AuthForm({ mode, action }: Props) {
               {state.message}
             </p>
           )}
-        </CardContent>
 
-        <CardFooter className="mt-6 flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={busy}>
+          <Button type="submit" className="mt-2 w-full" disabled={busy}>
             {pending
               ? "Please wait…"
               : isRegister
                 ? "Create account"
                 : "Sign in"}
           </Button>
-        </CardFooter>
+        </CardContent>
       </form>
 
-      <CardContent className="flex-col gap-3">
+      <CardContent className="flex flex-col gap-3 pt-0">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <Separator className="flex-1" />
           or
           <Separator className="flex-1" />
         </div>
-        <form action={guestAction} className="mt-3">
+        <form action={guestAction}>
           <Button
             type="submit"
             variant="outline"
@@ -133,14 +130,11 @@ export function AuthForm({ mode, action }: Props) {
             {guestPending ? "Please wait…" : "Continue as guest"}
           </Button>
         </form>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Guests can plan trips right away. Add an email later from your profile
           to save them.
         </p>
-      </CardContent>
-
-      <CardFooter>
-        <p className="text-sm text-muted-foreground">
+        <p className="border-t border-border pt-3 text-sm text-muted-foreground">
           {isRegister ? (
             <>
               Already have an account?{" "}
@@ -157,7 +151,7 @@ export function AuthForm({ mode, action }: Props) {
             </>
           )}
         </p>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

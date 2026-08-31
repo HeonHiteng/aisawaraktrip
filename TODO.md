@@ -15,7 +15,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
 | 8 | Admin dashboard | 🔨 (demo done; Supabase service-role wiring pending) |
 | 9 | Testing & security | 🔨 (tests + headers + rate limiting done; Sentry optional) |
-| 10 | Deployment | ⏭️ |
+| 10 | Deployment | 🔨 (deploy-ready; founder does the Vercel import) |
 
 ## Phase 1 — setup
 
@@ -161,6 +161,17 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ `supabase/rls-check.sql` — audit script to run once Supabase is connected
 - ✅ `npm audit` — 0 vulnerabilities
 - ⏭️ Optional: Sentry (`NEXT_PUBLIC_SENTRY_DSN`); tighten CSP with per-request nonces
+
+## Phase 10 — Deployment (deploy-ready)
+
+- ✅ `docs/deployment.md` — Vercel steps + full env-var checklist + prod Supabase/payments notes + smoke test
+- ✅ Legal: `/privacy` (PDPA-aware) + `/terms` (demo-data disclaimer); linked in the footer
+- ✅ PWA: `app/manifest.ts` (id/scope), `app/icon.tsx` + `app/apple-icon.tsx` — installable
+- ✅ SEO: `app/robots.ts` (disallows authed areas) + `app/sitemap.ts`
+- ✅ Resilience: branded `app/not-found.tsx`, `app/error.tsx`, `app/global-error.tsx`
+- ✅ `package.json` `engines.node = 22.x`; `lib/site.ts` picks up `VERCEL_PROJECT_PRODUCTION_URL`
+- ✅ Verified: prod build (`next start`) serves `/`, `/privacy`, `/terms`, `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`, 404
+- 🚫 Founder: import the repo at vercel.com → Deploy (runs in demo mode with zero env vars)
 
 ## Blocked / needs the founder
 

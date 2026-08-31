@@ -9,15 +9,18 @@ export function SiteFooter() {
           © {new Date().getFullYear()} {site.name}. MVP — demo data shown for
           illustration.
         </p>
-        <nav className="flex gap-4">
+        <nav className="flex flex-wrap gap-x-4 gap-y-1">
           <Link href="/explore" className="hover:text-foreground">
             Explore
           </Link>
           <Link href="/plan" className="hover:text-foreground">
             Plan a trip
           </Link>
-          <Link href="/login" className="hover:text-foreground">
-            Sign in
+          <Link href="/privacy" className="hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-foreground">
+            Terms
           </Link>
         </nav>
       </div>

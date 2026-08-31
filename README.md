@@ -94,4 +94,12 @@ supabase/
 components/  ui/ (shadcn) + feature components
 ```
 
-See `AGENTS.md` for conventions and `TODO.md` for the phase checklist.
+See `AGENTS.md` for conventions, `TODO.md` for the phase checklist,
+`docs/design-system.md` for UI, and `docs/deployment.md` to ship it.
+
+## Deploy
+
+Import the repo at [vercel.com](https://vercel.com) and hit Deploy — it runs in
+demo mode with **zero environment variables**. Add Supabase / Anthropic / Stripe
+keys later (see `docs/deployment.md`) and set `NEXT_PUBLIC_DEMO_MODE=false` to go
+live.

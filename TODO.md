@@ -249,9 +249,26 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ **Trip card meta** — flex-wrap row; fixes the date-range line breaking mid-value
   at 375px.
 - ✅ **Trip detail** — dropped the `v{n} · {requestSummary}` debug-looking line.
-- ⏭️ Deferred (needs a design call): trip-list cards all share the heavy dark
-  header (hard to scan a list); trip detail stacks 3 cards before the itinerary;
-  itinerary time-slotting shows an evening walk at 09:00.
+
+## Itinerary + trip-screen follow-ups (from the polish review)
+
+- ✅ **Itinerary time-slotting** — `buildItinerary` now schedules each experience
+  at its real `availability.times[0]` (the "Evening Walk" sits at 17:30, Bako at
+  07:30) and never on a weekday the vendor doesn't run it; attractions skip their
+  closed weekday (`openingHours` "Closed"); each full day is built into a
+  conflict-free schedule (no overlapping items) with a guaranteed meal unless a
+  food experience already covers dinner. +4 unit tests (real times, valid
+  weekdays, no overlaps, museum-not-on-Monday).
+- ✅ **Trip detail layout** — `BudgetBar` + `TripReadiness` merged into one
+  `TripSnapshot` card (budget row · divider · booking progress); the itinerary
+  now sits ~one card higher. Old two components removed.
+- ✅ **Trip-list cards** — `TripCard` takes `featured`; the newest trip keeps the
+  dark hero header, the rest render as light cards (status dot · title · meta ·
+  "Day-by-day plan · N experiences") so a stack is scannable.
+- ⏭️ Known limitations: `weekdayKey` shares the booking-gate's UTC-parse (fine on
+  UTC hosting); a hypothetical experience starting >22:00 with a long duration
+  would wrap past midnight and break the overlap math (no such fixture); attraction
+  `openingHours` beyond a literal "Closed" key are still not parsed.
 
 ## Blocked / needs the founder
 

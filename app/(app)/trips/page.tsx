@@ -36,8 +36,8 @@ export default async function TripsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {trips.map((t) => (
-            <TripCard key={t.id} trip={t} />
+          {trips.map((t, i) => (
+            <TripCard key={t.id} trip={t} featured={i === 0} />
           ))}
         </div>
       )}

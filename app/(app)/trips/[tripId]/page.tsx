@@ -6,10 +6,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { EmptyState } from "@/components/common/empty-state";
-import { BudgetBar } from "@/components/itinerary/budget-bar";
 import { DayCard } from "@/components/itinerary/day-card";
 import { RefineBox } from "@/components/itinerary/refine-box";
-import { TripReadiness } from "@/components/itinerary/trip-readiness";
+import { TripSnapshot } from "@/components/itinerary/trip-snapshot";
 import { requireUser } from "@/lib/auth";
 import { bookingsForTrip } from "@/lib/domain/bookings";
 import { getTrip } from "@/lib/domain/trips";
@@ -100,18 +99,16 @@ export default async function TripDetailPage({
         )}
       </div>
 
-      <BudgetBar
+      <TripSnapshot
         estimated={estimated}
         budget={trip.budgetPerPerson}
         pax={pax}
+        booked={bookedCount}
+        bookableTotal={bookableExpIds.size}
       />
 
       {trip.itinerary ? (
         <>
-          {bookableExpIds.size > 0 && (
-            <TripReadiness booked={bookedCount} total={bookableExpIds.size} />
-          )}
-
           <RefineBox tripId={trip.id} />
 
           <div className="space-y-4">

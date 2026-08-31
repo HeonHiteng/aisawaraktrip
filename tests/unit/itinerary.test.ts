@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { applyRefinement, buildItinerary } from "@/lib/ai/itinerary";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
-import { itineraryTotal, type TripInput } from "@/types/trip";
+import { weekdayKey } from "@/lib/format";
+import { itineraryTotal, type ItineraryItem, type TripInput } from "@/types/trip";
 
 const candidates = {
   experiences: demoExperiences,
@@ -71,9 +72,88 @@ describe("buildItinerary", () => {
     }
   });
 
-  it("gives every day at least one meal", () => {
-    for (const day of buildItinerary(trip(), candidates).days) {
-      expect(day.items.some((i) => i.type === "meal")).toBe(true);
+  it("every day has food sorted — a meal, or a food experience", () => {
+    for (const over of [
+      {},
+      { pace: "packed" as const, endDate: "2026-09-27" },
+      { pace: "relaxed" as const, endDate: "2026-09-24" },
+    ]) {
+      for (const day of buildItinerary(trip(over), candidates).days) {
+        const hasMeal = day.items.some((i) => i.type === "meal");
+        const hasFoodExp = day.items.some(
+          (i) =>
+            i.type === "experience" &&
+            (demoExperiences
+              .find((e) => e.id === i.experienceId)
+              ?.categories.includes("food") ??
+              false),
+        );
+        expect(hasMeal || hasFoodExp).toBe(true);
+      }
+    }
+  });
+
+  it("schedules experiences at their real start time, not a generic slot", () => {
+    const it = buildItinerary(
+      trip({ pace: "packed", endDate: "2026-09-27" }),
+      candidates,
+    );
+    let checked = 0;
+    for (const day of it.days) {
+      for (const item of day.items) {
+        if (!item.experienceId) continue;
+        const exp = demoExperiences.find((e) => e.id === item.experienceId)!;
+        expect(item.startTime).toBe(exp.availability.times[0]);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it("never schedules an experience on a weekday the vendor doesn't run it", () => {
+    const it = buildItinerary(
+      trip({ startDate: "2026-09-14", endDate: "2026-09-27", pace: "packed" }),
+      candidates,
+    );
+    for (const day of it.days) {
+      const wd = weekdayKey(day.date);
+      for (const item of day.items) {
+        if (!item.experienceId) continue;
+        const exp = demoExperiences.find((e) => e.id === item.experienceId)!;
+        if (exp.availability.days.length === 0) continue;
+        expect(exp.availability.days).toContain(wd);
+      }
+    }
+  });
+
+  it("produces a conflict-free daily schedule (no overlapping items)", () => {
+    const it = buildItinerary(
+      trip({ startDate: "2026-09-14", endDate: "2026-09-27", pace: "packed" }),
+      candidates,
+    );
+    const overlap = (a: ItineraryItem, b: ItineraryItem) =>
+      a.startTime < b.endTime && b.startTime < a.endTime;
+    for (const day of it.days) {
+      for (let i = 0; i < day.items.length; i++) {
+        for (let j = i + 1; j < day.items.length; j++) {
+          expect(overlap(day.items[i], day.items[j])).toBe(false);
+        }
+      }
+    }
+  });
+
+  it("respects an attraction's closed weekday (museum is shut Mondays)", () => {
+    // A 14-day packed trip cycles through every weekday, so the museum would be
+    // picked for a Monday if the closed check didn't work.
+    const it = buildItinerary(
+      trip({ startDate: "2026-09-07", endDate: "2026-09-20", pace: "packed" }),
+      candidates,
+    );
+    for (const day of it.days) {
+      if (weekdayKey(day.date) !== "mon") continue;
+      const slugs = day.items.map((i) => i.attractionSlug);
+      expect(slugs).not.toContain("borneo-cultures-museum");
+      expect(slugs).not.toContain("fort-margherita");
     }
   });
 

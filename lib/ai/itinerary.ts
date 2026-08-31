@@ -11,6 +11,7 @@ import type {
   TripInput,
 } from "@/types/trip";
 import { tripNights } from "@/types/trip";
+import { weekdayKey } from "@/lib/format";
 
 export interface Candidates {
   experiences: Experience[];
@@ -45,6 +46,48 @@ function addMinutes(time: string, minutes: number): string {
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
+/** Two "HH:MM" ranges share any time (zero-padded strings compare correctly). */
+function overlaps(aS: string, aE: string, bS: string, bE: string): boolean {
+  return aS < bE && bS < aE;
+}
+
+/** The real start time the vendor runs this experience at. */
+function expStartTime(e: Experience, fallback: string): string {
+  return e.availability.times[0] ?? fallback;
+}
+
+/** Does the experience operate on this weekday? (no days listed = any day) */
+function expRunsOn(e: Experience, weekday: string): boolean {
+  return e.availability.days.length === 0 || e.availability.days.includes(weekday);
+}
+
+/**
+ * Best-effort "closed today" check against the free-form `openingHours` map
+ * (e.g. `{ mon: "Closed" }` on the museum / fort).
+ */
+function attClosedOn(a: Attraction, weekday: string): boolean {
+  return Object.entries(a.openingHours).some(
+    ([k, v]) => k.toLowerCase() === weekday && /clos/i.test(v),
+  );
+}
+
+function sortByTime(items: ItineraryItem[]): ItineraryItem[] {
+  return [...items].sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
+
+/** First candidate start whose `mins`-long slot doesn't collide with `occupied`. */
+function firstFreeSlot(
+  occupied: Array<[string, string]>,
+  starts: string[],
+  mins: number,
+): string | null {
+  for (const s of starts) {
+    const e = addMinutes(s, mins);
+    if (occupied.every(([os, oe]) => !overlaps(s, e, os, oe))) return s;
+  }
+  return null;
+}
+
 function isoDate(start: string, offsetDays: number): string {
   const d = new Date(start);
   d.setDate(d.getDate() + offsetDays);
@@ -74,9 +117,10 @@ function why(cats: CategorySlug[], interests: CategorySlug[]): string {
 
 function expItem(
   e: Experience,
-  start: string,
+  fallbackStart: string,
   trip: TripInput,
 ): ItineraryItem {
+  const start = expStartTime(e, fallbackStart);
   return {
     id: uid(),
     type: "experience",
@@ -131,12 +175,15 @@ function mealItem(
     endTime: addMinutes(start, kind === "lunch" ? 60 : 90),
     durationMinutes: kind === "lunch" ? 60 : 90,
     title:
+      kind === "lunch" ? "Lunch — local Sarawak food" : "Dinner in town",
+    description:
       kind === "lunch"
-        ? "Lunch — local Sarawak food"
-        : "Dinner by the Waterfront",
-    description: foodie
-      ? "Try Sarawak laksa, kolo mee or midin — ask your guide for the day's pick."
-      : "A relaxed local meal near your afternoon stop.",
+        ? foodie
+          ? "Kolo mee, laksa or a quick Sarawak-style rice plate near your morning stop."
+          : "A relaxed local lunch near your morning stop."
+        : foodie
+          ? "Seafood, midin and a night-market wander — ask your host for the day's pick."
+          : "An easy local dinner to end the day.",
     whyRecommended: null,
     estimatedCost: unit * pax(trip),
     locationLabel: "Kuching",
@@ -194,10 +241,12 @@ export function buildItinerary(
   const expPool = exps.length ? exps : [...candidates.experiences];
   const attPool = atts.length ? atts : [...candidates.attractions];
 
-  let ei = 0;
-  let ai = 0;
-  const nextExp = () => (ei < expPool.length ? expPool[ei++] : null);
-  const nextAtt = () => (ai < attPool.length ? attPool[ai++] : null);
+  const usedExp = new Set<string>();
+  const usedAtt = new Set<string>();
+  const peekExp = (pred?: (e: Experience) => boolean) =>
+    expPool.find((e) => !usedExp.has(e.id) && (!pred || pred(e))) ?? null;
+  const peekAtt = (pred?: (a: Attraction) => boolean) =>
+    attPool.find((a) => !usedAtt.has(a.slug) && (!pred || pred(a))) ?? null;
 
   const maxExps = budgetTight ? 1 : trip.pace === "packed" ? nights + 1 : nights;
   let usedExps = 0;
@@ -206,69 +255,134 @@ export function buildItinerary(
 
   for (let d = 1; d <= nights; d++) {
     const date = isoDate(trip.startDate, d - 1);
+    const weekday = weekdayKey(date);
     const items: ItineraryItem[] = [];
+    const occupied: Array<[string, string]> = [];
+    const isFree = (s: string, e: string) =>
+      occupied.every(([os, oe]) => !overlaps(s, e, os, oe));
+
+    const addAtt = (a: Attraction, start: string) => {
+      usedAtt.add(a.slug);
+      const it = attItem(a, start, trip);
+      items.push(it);
+      occupied.push([it.startTime, it.endTime]);
+    };
+    const addExp = (e: Experience, fallbackStart: string) => {
+      usedExp.add(e.id);
+      const it = expItem(e, fallbackStart, trip);
+      items.push(it);
+      occupied.push([it.startTime, it.endTime]);
+      usedExps++;
+    };
+    const addFixed = (it: ItineraryItem) => {
+      items.push(it);
+      occupied.push([it.startTime, it.endTime]);
+    };
+
     const first = d === 1;
     const last = d === nights && nights > 1;
 
     if (first) {
-      const a = nextAtt();
-      if (a) items.push(attItem(a, "15:00", trip));
-      items.push(mealItem("19:00", "dinner", trip));
+      const a = peekAtt((x) => !attClosedOn(x, weekday));
+      if (a) addAtt(a, "15:00");
+      addFixed(mealItem("19:00", "dinner", trip));
       days.push({
         dayNumber: d,
         date,
         summary: "Arrival and a gentle first look at Kuching.",
-        items,
+        items: sortByTime(items),
       });
       continue;
     }
 
     if (last) {
-      const a = nextAtt();
-      if (a) items.push(attItem(a, "09:30", trip));
-      items.push(mealItem("12:30", "lunch", trip));
+      const a = peekAtt((x) => !attClosedOn(x, weekday));
+      if (a) addAtt(a, "09:30");
+      addFixed(mealItem("12:30", "lunch", trip));
       days.push({
         dayNumber: d,
         date,
         summary: "A last morning, then onward travel.",
-        items,
+        items: sortByTime(items),
       });
       continue;
     }
 
-    // full day
-    const morningExp =
-      usedExps < maxExps ? nextExp() : null;
-    if (morningExp) {
-      items.push(expItem(morningExp, "09:00", trip));
-      usedExps++;
-    } else {
-      const a = nextAtt();
-      if (a) items.push(attItem(a, "09:00", trip));
+    // ---- full day ----
+    // 1) the day's headline experience, at its real start time, on a day it runs
+    let placedExp = false;
+    if (usedExps < maxExps) {
+      const e = peekExp((x) => expRunsOn(x, weekday));
+      if (e) {
+        addExp(e, "09:00");
+        placedExp = true;
+      }
     }
 
-    items.push(mealItem("12:30", "lunch", trip));
+    // 2) a second experience on packed / alternating days — only if it fits
+    if (usedExps < maxExps && (trip.pace === "packed" || d % 2 === 0)) {
+      const e = peekExp((x) => {
+        if (!expRunsOn(x, weekday)) return false;
+        const s = expStartTime(x, "14:30");
+        return isFree(s, addMinutes(s, x.durationMinutes));
+      });
+      if (e) addExp(e, "14:30");
+    }
 
-    if (trip.pace === "relaxed") {
-      const a = nextAtt();
-      if (a) items.push(attItem(a, "15:00", trip));
-      else items.push(freeTime("15:00", "Free afternoon"));
-    } else {
-      const afternoonExp =
-        usedExps < maxExps && d % 2 === 0 ? nextExp() : null;
-      if (afternoonExp) {
-        items.push(expItem(afternoonExp, "14:30", trip));
-        usedExps++;
-      } else {
-        const a = nextAtt();
-        if (a) items.push(attItem(a, "14:30", trip));
-        else items.push(freeTime("14:30", "Free afternoon"));
+    // 3) lunch, if the midday window is open
+    if (isFree("12:30", "13:30")) addFixed(mealItem("12:30", "lunch", trip));
+
+    // 4) a morning stop, if there's room before noon
+    if (isFree("09:30", "12:00")) {
+      const a = peekAtt(
+        (x) =>
+          !attClosedOn(x, weekday) &&
+          isFree("09:30", addMinutes("09:30", x.avgVisitMinutes)),
+      );
+      if (a) addAtt(a, "09:30");
+    }
+
+    // 5) the afternoon — another stop, or open time on a relaxed day
+    if (isFree("14:30", "17:00")) {
+      const a = peekAtt(
+        (x) =>
+          !attClosedOn(x, weekday) &&
+          isFree("14:30", addMinutes("14:30", x.avgVisitMinutes)),
+      );
+      if (a) addAtt(a, "14:30");
+      else if (trip.pace === "relaxed" || !placedExp)
+        addFixed(freeTime("14:30", "Free afternoon"));
+    }
+
+    // 6) make sure the traveller eats — unless a food experience covers dinner
+    const dinnerCovered = items.some((i) => {
+      if (i.type !== "experience") return false;
+      const e = expPool.find((x) => x.id === i.experienceId);
+      return (
+        !!e &&
+        e.categories.includes("food") &&
+        overlaps(i.startTime, i.endTime, "18:00", "21:00")
+      );
+    });
+    if (!items.some((i) => i.type === "meal") && !dinnerCovered) {
+      const slot = firstFreeSlot(
+        occupied,
+        ["19:00", "19:30", "18:30", "20:00", "13:00", "12:00", "20:30"],
+        75,
+      );
+      if (slot) {
+        addFixed(mealItem(slot, slot >= "15:00" ? "dinner" : "lunch", trip));
       }
-      if (trip.pace === "packed") {
-        const a = nextAtt();
-        if (a) items.push(attItem(a, "18:00", trip));
-        else items.push(mealItem("19:00", "dinner", trip));
-      }
+    }
+
+    // 7) a packed day earns an evening stop, if there's still room
+    if (trip.pace === "packed" && isFree("18:30", "20:30")) {
+      const a = peekAtt(
+        (x) =>
+          !attClosedOn(x, weekday) &&
+          isFree("18:30", addMinutes("18:30", x.avgVisitMinutes)),
+      );
+      if (a) addAtt(a, "18:30");
     }
 
     const themeCats = items
@@ -289,7 +403,7 @@ export function buildItinerary(
       summary: uniqueTheme.length
         ? `A day around ${uniqueTheme.join(" and ")}.`
         : "Exploring more of Kuching and around.",
-      items: items.sort((x, y) => x.startTime.localeCompare(y.startTime)),
+      items: sortByTime(items),
     });
   }
 

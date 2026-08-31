@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { requireUser } from "@/lib/auth";
 import { getBooking } from "@/lib/domain/bookings";
+import { getTrip } from "@/lib/domain/trips";
 import { formatDate, formatMYR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS_META } from "@/types/booking";
@@ -31,16 +32,30 @@ export default async function BookingDetailPage({
 
   const meta = BOOKING_STATUS_META[b.status];
   const canCancel = b.status === "pending" || b.status === "confirmed";
+  const trip = b.tripId ? await getTrip(user.id, b.tripId) : null;
 
   return (
     <div className="space-y-5">
-      <Link
-        href="/bookings"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        My Bookings
-      </Link>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <Link
+          href="/bookings"
+          className="inline-flex items-center gap-1 hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" />
+          My Bookings
+        </Link>
+        {trip && (
+          <>
+            <span aria-hidden>·</span>
+            <Link
+              href={`/trips/${trip.id}`}
+              className="hover:text-foreground hover:underline"
+            >
+              {trip.title}
+            </Link>
+          </>
+        )}
+      </div>
 
       {b.status === "pending" && (
         <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">

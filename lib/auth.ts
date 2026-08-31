@@ -1,9 +1,11 @@
 import "server-only";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { getDemoUser } from "@/lib/demo/session";
+import { safeNextPath } from "@/lib/nav";
 
 export type Role = "tourist" | "admin";
 
@@ -79,17 +81,23 @@ export async function getProfile(): Promise<Profile | null> {
   return (data as Profile | null) ?? null;
 }
 
-/** Redirect to /login unless signed in. Returns the user. */
+/** `/login`, carrying where the user was so we can send them back after. */
+async function loginPath(): Promise<string> {
+  const here = safeNextPath((await headers()).get("x-pathname"), "");
+  return here ? `/login?next=${encodeURIComponent(here)}` : "/login";
+}
+
+/** Redirect to /login (preserving where they were) unless signed in. */
 export async function requireUser(): Promise<AppUser> {
   const user = await getUser();
-  if (!user) redirect("/login");
-  return user;
+  if (user) return user;
+  redirect(await loginPath());
 }
 
 /** Redirect unless signed in AND an admin. Returns the profile. */
 export async function requireAdmin(): Promise<Profile> {
   const profile = await getProfile();
-  if (!profile) redirect("/login");
+  if (!profile) redirect(await loginPath());
   if (profile.role !== "admin") redirect("/");
   return profile;
 }

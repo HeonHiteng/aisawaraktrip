@@ -270,6 +270,29 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   would wrap past midnight and break the overlap math (no such fixture); attraction
   `openingHours` beyond a literal "Closed" key are still not parsed.
 
+## User-flow pass — P0 (from the flow analysis)
+
+- ✅ **Auth no longer throws away intent.** `proxy.ts` sets `x-pathname`;
+  `requireUser()` redirects to `/login?next=<here>`; `login` / `register` /
+  `continueAsGuest` / `enterDemo` honour it (`lib/nav.ts` `safeNextPath` blocks
+  open-redirects — `//evil`, `https://…`, bouncing back to `/login`). Cross-links
+  and the `emailRedirectTo` carry `next` too. +1 E2E (`?next` → destination),
+  +4 unit tests.
+- ✅ **Demo mode skips the login interstitial.** In demo, `proxy.ts` auto-starts a
+  guest session for app routes (`/home /plan /explore /trips /bookings /profile
+  /checkout /book`) — landing CTAs and deep links go straight in. `/admin` still
+  routes through `/login`. +1 E2E (deep link → planner, no bounce).
+- ✅ **Booking keeps the trip thread.** `?trip=` already flowed into
+  `/book/*`; now the payment-result page, when the booking belongs to a trip,
+  shows **"Book next: <experience>"** + **"Back to trip"**, or **"Your trip is
+  all booked → See your trip"** when nothing's left — instead of dumping to the
+  bookings list. Booking detail gains a "· <trip title>" link.
+  `bookableExperiences(itinerary)` extracted to `types/trip.ts` (was duplicated in
+  the trip page). +2 unit tests. Golden-path E2E updated for the new CTAs.
+- ⏭️ Deferred (P1+): one-shot "book all N experiences · pay once"; itinerary-date
+  vs bookable-date reconciliation; "trip confirmed" summary (calendar/share);
+  one-shot plan-from-sentence; Explore↔trip `?trip=&day=` threading.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

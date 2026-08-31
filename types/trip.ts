@@ -108,3 +108,21 @@ export function itineraryTotal(itinerary: Itinerary | null): number {
 export function dayTotal(day: ItineraryDay): number {
   return day.items.reduce((s, i) => s + i.estimatedCost, 0);
 }
+
+/** Distinct bookable experiences in an itinerary, in day order (deduped). */
+export function bookableExperiences(
+  itinerary: Itinerary | null,
+): { experienceId: string; title: string }[] {
+  if (!itinerary) return [];
+  const seen = new Set<string>();
+  const out: { experienceId: string; title: string }[] = [];
+  for (const day of itinerary.days) {
+    for (const item of day.items) {
+      if (item.bookable && item.experienceId && !seen.has(item.experienceId)) {
+        seen.add(item.experienceId);
+        out.push({ experienceId: item.experienceId, title: item.title });
+      }
+    }
+  }
+  return out;
+}

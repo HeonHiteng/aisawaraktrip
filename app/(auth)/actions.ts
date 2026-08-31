@@ -11,6 +11,7 @@ import {
   type DemoPersona,
 } from "@/lib/demo/session";
 import { site } from "@/lib/site";
+import { safeNextPath } from "@/lib/nav";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   loginSchema,
@@ -39,17 +40,21 @@ async function authThrottle(): Promise<AuthState | null> {
     : { error: `Too many attempts. Try again in ${retryAfter}s.` };
 }
 
-async function enterDemo(persona: DemoPersona): Promise<never> {
+async function enterDemo(
+  persona: DemoPersona,
+  next?: string | null,
+): Promise<never> {
   await setDemoUser(persona);
   revalidatePath("/", "layout");
-  redirect(persona === "admin" ? "/admin" : "/home");
+  redirect(persona === "admin" ? "/admin" : safeNextPath(next));
 }
 
 export async function login(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  if (DEMO_MODE) return enterDemo("tourist");
+  const next = formData.get("next") as string | null;
+  if (DEMO_MODE) return enterDemo("tourist", next);
   const throttled = await authThrottle();
   if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
@@ -65,14 +70,15 @@ export async function login(
   if (error) return { error: "Email or password is incorrect." };
 
   revalidatePath("/", "layout");
-  redirect("/home");
+  redirect(safeNextPath(next));
 }
 
 export async function register(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  if (DEMO_MODE) return enterDemo("tourist");
+  const next = formData.get("next") as string | null;
+  if (DEMO_MODE) return enterDemo("tourist", next);
   const throttled = await authThrottle();
   if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
@@ -86,29 +92,31 @@ export async function register(
     return { error: parsed.error.issues[0]?.message ?? "Check your details." };
   }
 
+  const dest = safeNextPath(next);
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${site.url}/auth/callback`,
+      emailRedirectTo: `${site.url}/auth/callback?next=${encodeURIComponent(dest)}`,
     },
   });
   if (error) return { error: error.message };
 
   if (data.session) {
     revalidatePath("/", "layout");
-    redirect("/home");
+    redirect(dest);
   }
   return { message: "Check your email to confirm your account, then sign in." };
 }
 
 export async function continueAsGuest(
   _prev: AuthState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<AuthState> {
-  if (DEMO_MODE) return enterDemo("guest");
+  const next = formData.get("next") as string | null;
+  if (DEMO_MODE) return enterDemo("guest", next);
   const throttled = await authThrottle();
   if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
@@ -125,7 +133,7 @@ export async function continueAsGuest(
   }
 
   revalidatePath("/", "layout");
-  redirect("/home");
+  redirect(safeNextPath(next));
 }
 
 /** Demo-only: jump between the guest / traveller / admin views. */

@@ -40,20 +40,21 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
   await page.waitForURL(/\/checkout\/gateway/, { timeout: 15_000 });
   await page.getByRole("button", { name: "Approve payment" }).click();
 
-  // --- result -> confirmed ---
+  // --- result -> confirmed, and the flow keeps you in the trip ---
   await page.waitForURL(/\/checkout\/[a-z0-9]+\/result/, { timeout: 15_000 });
   await expect(
-    page.getByRole("heading", { name: "Payment received" }),
+    page.getByRole("heading", { name: /Payment received|trip is all booked/i }),
   ).toBeVisible();
-
-  await page.getByRole("link", { name: "View booking" }).click();
-  await page.waitForURL(/\/bookings\/[a-z0-9]+$/);
-  await expect(page.getByText(/Booking confirmed/).first()).toBeVisible();
-  const bookingId = page.url().split("/bookings/")[1]!;
+  const bookingId = page.url().match(/checkout\/([a-z0-9]+)\/result/)![1];
+  await expect(
+    page.getByRole("link", { name: /Book next:|Back to trip|See your trip/i }),
+  ).toBeVisible();
 
   // --- shows in My Bookings ---
   await page.goto("/bookings");
   await expect(page.getByText("Confirmed").first()).toBeVisible();
+  await page.goto(`/bookings/${bookingId}`);
+  await expect(page.getByText(/Booking confirmed/).first()).toBeVisible();
 
   // --- admin can see and manage it ---
   await page.getByRole("button", { name: "Admin" }).click();
@@ -78,4 +79,20 @@ test("guest cannot reach the admin dashboard", async ({ page }) => {
 
   await page.goto("/admin");
   await expect(page).not.toHaveURL(/\/admin/);
+});
+
+test("demo: a deep link into the app lands you there, not at /login", async ({
+  page,
+}) => {
+  await page.goto("/plan");
+  await expect(page).toHaveURL(/\/plan$/);
+  await expect(
+    page.getByRole("heading", { name: "AI Trip Planner" }),
+  ).toBeVisible();
+});
+
+test("login carries ?next through to the destination", async ({ page }) => {
+  await page.goto("/login?next=%2Fbookings");
+  await page.getByRole("button", { name: "Continue as guest" }).click();
+  await expect(page).toHaveURL(/\/bookings$/, { timeout: 15_000 });
 });

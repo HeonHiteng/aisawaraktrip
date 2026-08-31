@@ -15,7 +15,12 @@ import { getTrip } from "@/lib/domain/trips";
 import { formatDateRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BookingStatus } from "@/types/booking";
-import { itineraryTotal, tripNights, TRIP_STATUS_META } from "@/types/trip";
+import {
+  bookableExperiences,
+  itineraryTotal,
+  tripNights,
+  TRIP_STATUS_META,
+} from "@/types/trip";
 import {
   deleteTripAction,
   regenerateTrip,
@@ -50,13 +55,9 @@ export default async function TripDetailPage({
   for (const b of bookings) {
     bookingsByExperience[b.experienceId] = { id: b.id, status: b.status };
   }
-  const bookableExpIds = new Set(
-    trip.itinerary?.days.flatMap((d) =>
-      d.items.filter((i) => i.bookable && i.experienceId).map((i) => i.experienceId!),
-    ) ?? [],
-  );
-  const bookedCount = [...bookableExpIds].filter(
-    (id) => bookingsByExperience[id],
+  const bookable = bookableExperiences(trip.itinerary);
+  const bookedCount = bookable.filter(
+    (e) => bookingsByExperience[e.experienceId],
   ).length;
 
   return (
@@ -104,7 +105,7 @@ export default async function TripDetailPage({
         budget={trip.budgetPerPerson}
         pax={pax}
         booked={bookedCount}
-        bookableTotal={bookableExpIds.size}
+        bookableTotal={bookable.length}
       />
 
       {trip.itinerary ? (

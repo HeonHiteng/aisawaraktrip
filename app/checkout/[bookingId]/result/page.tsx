@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, PartyPopper, XCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
-import { getBooking } from "@/lib/domain/bookings";
+import { getBooking, bookingsForTrip } from "@/lib/domain/bookings";
 import { getPaymentForBooking } from "@/lib/domain/payments";
+import { getTrip } from "@/lib/domain/trips";
 import { formatDate, formatMYR } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { bookableExperiences } from "@/types/trip";
 
 export const metadata: Metadata = { title: "Payment result" };
 
@@ -24,15 +26,42 @@ export default async function PaymentResultPage({
 
   const paid = booking.status === "confirmed" && payment?.status === "paid";
 
+  // If this booking belongs to a trip, work out what's still unbooked so we can
+  // keep the traveller moving instead of dumping them on the bookings list.
+  let trip = null;
+  let nextUp: { experienceId: string; title: string } | null = null;
+  let tripAllBooked = false;
+  if (paid && booking.tripId) {
+    const t = await getTrip(user.id, booking.tripId);
+    if (t?.itinerary) {
+      trip = t;
+      const tripBookings = await bookingsForTrip(user.id, t.id);
+      const bookedIds = new Set(tripBookings.map((b) => b.experienceId));
+      const remaining = bookableExperiences(t.itinerary).filter(
+        (e) => !bookedIds.has(e.experienceId),
+      );
+      nextUp = remaining[0] ?? null;
+      tripAllBooked = remaining.length === 0;
+    }
+  }
+
   return (
     <div className="space-y-5 text-center">
       {paid ? (
         <>
-          <CheckCircle2 className="mx-auto size-14 text-emerald-500" />
+          {tripAllBooked ? (
+            <PartyPopper className="mx-auto size-14 text-emerald-500" />
+          ) : (
+            <CheckCircle2 className="mx-auto size-14 text-emerald-500" />
+          )}
           <div>
-            <h1 className="text-xl font-bold">Payment received</h1>
+            <h1 className="text-xl font-bold">
+              {tripAllBooked ? "Your trip is all booked" : "Payment received"}
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your booking is confirmed. A receipt is on its way to{" "}
+              {tripAllBooked
+                ? "Every experience on this trip is confirmed. A receipt is on its way to "
+                : "Your booking is confirmed. A receipt is on its way to "}
               {booking.customerEmail}.
             </p>
           </div>
@@ -68,12 +97,41 @@ export default async function PaymentResultPage({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Link
-          href={`/bookings/${bookingId}`}
-          className={buttonVariants({ variant: "brand", size: "lg" })}
-        >
-          View booking
-        </Link>
+        {paid && nextUp && trip ? (
+          <Link
+            href={`/book/${nextUp.experienceId}?trip=${trip.id}`}
+            className={buttonVariants({ variant: "brand", size: "lg" })}
+          >
+            Book next: {nextUp.title}
+            <ArrowRight className="size-4" />
+          </Link>
+        ) : (
+          <Link
+            href={`/bookings/${bookingId}`}
+            className={buttonVariants({ variant: "brand", size: "lg" })}
+          >
+            View booking
+          </Link>
+        )}
+
+        {paid && trip && (
+          <Link
+            href={`/trips/${trip.id}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {tripAllBooked ? "See your trip" : "Back to trip"}
+          </Link>
+        )}
+
+        {paid && nextUp && trip && (
+          <Link
+            href={`/bookings/${bookingId}`}
+            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            View this booking
+          </Link>
+        )}
+
         {!paid && (
           <Link
             href={`/checkout/${bookingId}`}

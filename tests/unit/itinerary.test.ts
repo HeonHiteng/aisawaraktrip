@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { applyRefinement, buildItinerary } from "@/lib/ai/itinerary";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
 import { weekdayKey } from "@/lib/format";
-import { itineraryTotal, type ItineraryItem, type TripInput } from "@/types/trip";
+import {
+  bookableExperiences,
+  itineraryTotal,
+  type ItineraryItem,
+  type TripInput,
+} from "@/types/trip";
 
 const candidates = {
   experiences: demoExperiences,
@@ -208,5 +213,37 @@ describe("applyRefinement", () => {
     const base = buildItinerary(trip(), candidates);
     const { note } = applyRefinement(base, "asdfghjkl", trip(), candidates);
     expect(note.toLowerCase()).toContain("couldn't");
+  });
+});
+
+describe("bookableExperiences", () => {
+  it("lists each bookable experience once, in day order", () => {
+    const it = buildItinerary(
+      trip({ startDate: "2026-09-14", endDate: "2026-09-20", pace: "packed" }),
+      candidates,
+    );
+    const list = bookableExperiences(it);
+    expect(list.length).toBeGreaterThan(0);
+
+    const ids = list.map((e) => e.experienceId);
+    expect(new Set(ids).size).toBe(ids.length); // no dupes
+    for (const e of list) {
+      expect(validExpIds.has(e.experienceId)).toBe(true);
+      expect(e.title).toBeTruthy();
+    }
+
+    // matches the bookable experience items actually in the itinerary
+    const fromDays = new Set(
+      it.days.flatMap((d) =>
+        d.items
+          .filter((i) => i.bookable && i.experienceId)
+          .map((i) => i.experienceId as string),
+      ),
+    );
+    expect(new Set(ids)).toEqual(fromDays);
+  });
+
+  it("returns [] for a null itinerary", () => {
+    expect(bookableExperiences(null)).toEqual([]);
   });
 });

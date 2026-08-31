@@ -21,9 +21,11 @@ type Mode = "login" | "register";
 type Props = {
   mode: Mode;
   action: (prev: AuthState, formData: FormData) => Promise<AuthState>;
+  /** Where to send the user after they sign in. */
+  next?: string;
 };
 
-export function AuthForm({ mode, action }: Props) {
+export function AuthForm({ mode, action, next }: Props) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
     {},
@@ -56,6 +58,7 @@ export function AuthForm({ mode, action }: Props) {
       </CardHeader>
 
       <form action={formAction}>
+        {next && <input type="hidden" name="next" value={next} />}
         <CardContent className="space-y-4">
           {isRegister && (
             <div className="space-y-2">
@@ -121,6 +124,7 @@ export function AuthForm({ mode, action }: Props) {
           <Separator className="flex-1" />
         </div>
         <form action={guestAction}>
+          {next && <input type="hidden" name="next" value={next} />}
           <Button
             type="submit"
             variant="outline"
@@ -138,14 +142,24 @@ export function AuthForm({ mode, action }: Props) {
           {isRegister ? (
             <>
               Already have an account?{" "}
-              <Link href="/login" className="text-foreground underline">
+              <Link
+                href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+                className="text-foreground underline"
+              >
                 Sign in
               </Link>
             </>
           ) : (
             <>
               New here?{" "}
-              <Link href="/register" className="text-foreground underline">
+              <Link
+                href={
+                  next
+                    ? `/register?next=${encodeURIComponent(next)}`
+                    : "/register"
+                }
+                className="text-foreground underline"
+              >
                 Create an account
               </Link>
             </>

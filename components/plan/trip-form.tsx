@@ -185,10 +185,11 @@ export function TripForm({
                   <button
                     key={b.value}
                     type="button"
+                    aria-pressed={budget === b.value}
                     onClick={() => setBudget(b.value)}
                     disabled={pending}
                     className={cn(
-                      "flex-1 rounded-xl border px-2 py-2 text-center transition-colors",
+                      "flex-1 rounded-xl border px-2 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       budget === b.value
                         ? "border-primary bg-primary/5"
                         : "border-border hover:bg-accent",
@@ -263,10 +264,11 @@ export function TripForm({
                     <button
                       key={c.slug}
                       type="button"
+                      aria-pressed={on}
                       onClick={() => toggleInterest(c.slug)}
                       disabled={pending}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         on
                           ? "border-transparent bg-primary text-primary-foreground"
                           : "border-border text-muted-foreground hover:bg-accent",
@@ -289,10 +291,11 @@ export function TripForm({
                   <button
                     key={p.value}
                     type="button"
+                    aria-pressed={pace === p.value}
                     onClick={() => setPace(p.value)}
                     disabled={pending}
                     className={cn(
-                      "flex-1 rounded-full border px-3 py-1.5 text-center text-xs font-medium transition-colors",
+                      "flex-1 rounded-full border px-3 py-1.5 text-center text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       pace === p.value
                         ? "border-transparent bg-primary text-primary-foreground"
                         : "border-border text-muted-foreground hover:bg-accent",

@@ -4,6 +4,7 @@ import { demoStoreFor } from "@/lib/demo/store";
 import { getBooking, setBookingStatus } from "@/lib/domain/bookings";
 import { setTripStatus } from "@/lib/domain/trips";
 import { getPaymentProvider } from "@/lib/payments";
+import type { VerifiedPayment } from "@/lib/payments/types";
 import { sendBookingConfirmation } from "@/lib/email";
 import type { Payment, PaymentMethod } from "@/types/payment";
 
@@ -91,12 +92,21 @@ export async function settlePayment(
     (p) => p.providerRef === result.providerRef,
   );
 
-  if (payment && payment.status !== "paid") {
-    payment.status = result.status === "paid" ? "paid" : result.status;
-    payment.providerPaymentId = result.providerPaymentId;
-    payment.paidAt = result.status === "paid" ? new Date().toISOString() : null;
+  // The provider's amount must match what we snapshotted at startPayment.
+  // A callback that says "paid" for a different amount is tampered / stale —
+  // never confirm the booking on it. (Real gateways: this runs *after* the
+  // signature check in the webhook handler.)
+  const amountOk =
+    !!payment && Math.round(result.amount) === Math.round(payment.amount);
+  const settledStatus: VerifiedPayment["status"] =
+    result.status === "paid" && !amountOk ? "failed" : result.status;
 
-    if (result.status === "paid") {
+  if (payment && payment.status !== "paid") {
+    payment.status = settledStatus === "paid" ? "paid" : settledStatus;
+    payment.providerPaymentId = result.providerPaymentId;
+    payment.paidAt = settledStatus === "paid" ? new Date().toISOString() : null;
+
+    if (settledStatus === "paid") {
       await setBookingStatus(userId, payment.bookingId, "confirmed");
       const booking = await getBooking(userId, payment.bookingId);
       if (booking) {
@@ -110,9 +120,9 @@ export async function settlePayment(
 
   return {
     status:
-      result.status === "paid"
+      settledStatus === "paid"
         ? "paid"
-        : result.status === "cancelled"
+        : settledStatus === "cancelled"
           ? "cancelled"
           : "failed",
   };

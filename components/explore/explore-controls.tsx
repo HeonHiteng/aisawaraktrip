@@ -46,6 +46,8 @@ export function ExploreControls() {
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          type="search"
+          aria-label="Search experiences and places"
           defaultValue={q}
           placeholder="Search experiences, places…"
           className="pl-9"
@@ -53,14 +55,20 @@ export function ExploreControls() {
         />
       </div>
 
-      <div className="flex gap-1 rounded-full bg-muted p-1">
+      <div
+        role="tablist"
+        aria-label="Browse experiences or attractions"
+        className="flex gap-1 rounded-full bg-muted p-1"
+      >
         {tabs.map((t) => (
           <button
             key={t.value}
             type="button"
+            role="tab"
+            aria-selected={tab === t.value}
             onClick={() => update({ tab: t.value === "experiences" ? null : t.value })}
             className={cn(
-              "flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+              "flex-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               tab === t.value
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground",
@@ -78,9 +86,10 @@ export function ExploreControls() {
             <button
               key={c.slug}
               type="button"
+              aria-pressed={on}
               onClick={() => toggleCat(c.slug)}
               className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 on
                   ? "border-transparent bg-primary text-primary-foreground"
                   : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",

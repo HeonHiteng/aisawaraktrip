@@ -29,6 +29,25 @@ function isoIn(hours: number) {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * First bookable date: at least `leadtimeHours` out, and — if the experience
+ * only runs on certain weekdays — the next date that actually falls on one.
+ * Keeps the form from opening in a disabled state.
+ */
+function firstAvailableDate(leadtimeHours: number, availableDays: string[]) {
+  const base = new Date();
+  base.setHours(base.getHours() + Math.max(leadtimeHours, 72));
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    if (!availableDays.length || availableDays.includes(weekdayKey(iso))) {
+      return iso;
+    }
+  }
+  return base.toISOString().slice(0, 10);
+}
+
 export function BookingForm(props: Props) {
   const [state, action, pending] = useActionState<BookState, FormData>(
     submitBooking,
@@ -36,7 +55,9 @@ export function BookingForm(props: Props) {
   );
   const [adults, setAdults] = useState(Math.max(props.minPax, 2));
   const [children, setChildren] = useState(0);
-  const [date, setDate] = useState(isoIn(Math.max(props.leadtimeHours, 72)));
+  const [date, setDate] = useState(
+    firstAvailableDate(props.leadtimeHours, props.availableDays),
+  );
 
   const dateWarning =
     props.availableDays.length &&

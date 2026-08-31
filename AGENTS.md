@@ -82,7 +82,16 @@ npm run dev        # Turbopack dev server on :3000
 npm run build      # production build
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
+npm test           # vitest run (unit)
+npm run test:e2e   # playwright (golden path; starts its own dev server)
 ```
+
+## Security
+
+- Headers (CSP/HSTS/etc.) in `next.config.ts` `headers()`.
+- Rate limiting via `lib/rate-limit.ts` on auth + AI + booking actions.
+- Every mutation re-checks ownership server-side (`requireUser()` + `user.id`); never
+  trust an id from the client. Payment settlement is server-only (`settlePayment`).
 
 ## Status
 

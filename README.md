@@ -74,6 +74,8 @@ npm run build      # production build
 npm run start      # serve production build
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
+npm test           # unit tests (Vitest)
+npm run test:e2e   # end-to-end golden path (Playwright, demo mode)
 ```
 
 ## Project layout

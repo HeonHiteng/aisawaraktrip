@@ -14,6 +14,7 @@ import {
   addExperienceToDay,
   removeItem as removeItineraryItem,
 } from "@/lib/ai/itinerary";
+import { rateLimit } from "@/lib/rate-limit";
 import { refineSchema } from "@/lib/validation/trip";
 
 export type RefineState = { note?: string; error?: string };
@@ -38,6 +39,9 @@ export async function refineTrip(
   formData: FormData,
 ): Promise<RefineState> {
   const user = await requireUser();
+  const rl = await rateLimit(`ai:refine:${user.id}`, 20, 60_000);
+  if (!rl.ok) return { error: `Slow down — try again in ${rl.retryAfter}s.` };
+
   const tripId = String(formData.get("tripId") ?? "");
   const parsed = refineSchema.safeParse({
     instruction: formData.get("instruction"),

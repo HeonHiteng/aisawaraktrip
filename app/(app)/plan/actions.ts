@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { generateItinerary } from "@/lib/ai/generate";
 import { createTrip } from "@/lib/domain/trips";
+import { rateLimit } from "@/lib/rate-limit";
 import { tripInputSchema } from "@/lib/validation/trip";
 
 export type PlanState = { error?: string };
@@ -14,6 +15,12 @@ export async function generateTrip(
   formData: FormData,
 ): Promise<PlanState> {
   const user = await requireUser();
+
+  // AI generation is the most expensive path — cap it per user.
+  const rl = await rateLimit(`ai:plan:${user.id}`, 8, 60_000);
+  if (!rl.ok) {
+    return { error: `Slow down — try again in ${rl.retryAfter}s.` };
+  }
 
   const parsed = tripInputSchema.safeParse({
     title: formData.get("title") || "My Sarawak trip",

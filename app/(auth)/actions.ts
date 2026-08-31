@@ -11,6 +11,7 @@ import {
   type DemoPersona,
 } from "@/lib/demo/session";
 import { site } from "@/lib/site";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   loginSchema,
   registerSchema,
@@ -26,6 +27,18 @@ export type AuthState = {
   message?: string;
 };
 
+/** Per-IP throttle for the auth surface. */
+async function authThrottle(): Promise<AuthState | null> {
+  const { ok, retryAfter } = await rateLimit(
+    `auth:${await clientIp()}`,
+    12,
+    5 * 60_000,
+  );
+  return ok
+    ? null
+    : { error: `Too many attempts. Try again in ${retryAfter}s.` };
+}
+
 async function enterDemo(persona: DemoPersona): Promise<never> {
   await setDemoUser(persona);
   revalidatePath("/", "layout");
@@ -37,6 +50,8 @@ export async function login(
   formData: FormData,
 ): Promise<AuthState> {
   if (DEMO_MODE) return enterDemo("tourist");
+  const throttled = await authThrottle();
+  if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
 
   const parsed = loginSchema.safeParse({
@@ -58,6 +73,8 @@ export async function register(
   formData: FormData,
 ): Promise<AuthState> {
   if (DEMO_MODE) return enterDemo("tourist");
+  const throttled = await authThrottle();
+  if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
 
   const parsed = registerSchema.safeParse({
@@ -92,6 +109,8 @@ export async function continueAsGuest(
   _formData: FormData,
 ): Promise<AuthState> {
   if (DEMO_MODE) return enterDemo("guest");
+  const throttled = await authThrottle();
+  if (throttled) return throttled;
   if (!isSupabaseConfigured) return NOT_CONFIGURED;
 
   const supabase = await createClient();

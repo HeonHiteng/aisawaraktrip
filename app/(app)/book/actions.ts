@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createBooking } from "@/lib/domain/bookings";
+import { rateLimit } from "@/lib/rate-limit";
 import { bookingInputSchema } from "@/lib/validation/booking";
 
 export type BookState = { error?: string };
@@ -13,6 +14,11 @@ export async function submitBooking(
   formData: FormData,
 ): Promise<BookState> {
   const user = await requireUser();
+
+  const rl = await rateLimit(`book:${user.id}`, 12, 60_000);
+  if (!rl.ok) {
+    return { error: `Too many booking attempts. Try again in ${rl.retryAfter}s.` };
+  }
 
   const parsed = bookingInputSchema.safeParse({
     experienceId: formData.get("experienceId"),

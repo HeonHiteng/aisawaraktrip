@@ -14,8 +14,8 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 6 | Booking system | 🔨 (demo done; Supabase pending) |
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
 | 8 | Admin dashboard | 🔨 (demo done; Supabase service-role wiring pending) |
-| 9 | Testing & security | |
-| 10 | Deployment | |
+| 9 | Testing & security | 🔨 (tests + headers + rate limiting done; Sentry optional) |
+| 10 | Deployment | ⏭️ |
 
 ## Phase 1 — setup
 
@@ -142,6 +142,25 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ Verified in browser: **full DoD** (guest → plan → book → pay → confirmed → My Bookings → admin sees & confirms the booking); vendor verify; experience publish toggle hides it from Explore
 - 🐛 Fixed: multi-submit-button forms (persona switcher) — each button now its own `<form>` + hidden input
 - ⏭️ Real: route `lib/domain/admin` through the Supabase service-role client; image upload to Storage; Supabase Auth admin API for users
+
+## Phase 9 — Testing & security
+
+- ✅ **Vitest** (`npm test`) — 45 unit tests: itinerary builder (incl. "AI never
+  invents data" — every id in output exists in the catalogue), refinement rules,
+  booking pricing, all Zod schemas, mock payment provider, formatters, rate limiter
+- ✅ **Playwright** (`npm run test:e2e`) — 2 specs: the full golden path
+  (guest → plan → itinerary → refine → book → pay → confirmed → My Bookings →
+  admin sees & marks completed) and "guest can't reach /admin"
+- ✅ **Security headers** in `next.config.ts` — CSP (dev-relaxed), HSTS, X-Frame-Options
+  DENY, nosniff, Referrer-Policy, Permissions-Policy
+- ✅ **Rate limiting** — `lib/rate-limit.ts` (in-process sliding window; Upstash swap
+  is a TODO) on auth (12/5min per IP), AI generate (8/min), AI refine (20/min),
+  booking (12/min) per user
+- ✅ Server-side payment verification + amount snapshot (Phase 7) · ownership scoping
+  via `requireUser()` + `user.id` everywhere
+- ✅ `supabase/rls-check.sql` — audit script to run once Supabase is connected
+- ✅ `npm audit` — 0 vulnerabilities
+- ⏭️ Optional: Sentry (`NEXT_PUBLIC_SENTRY_DSN`); tighten CSP with per-request nonces
 
 ## Blocked / needs the founder
 

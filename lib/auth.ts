@@ -50,7 +50,12 @@ export async function getProfile(): Promise<Profile | null> {
     if (!u) return null;
     return {
       id: u.id,
-      full_name: u.persona === "guest" ? "Guest" : "Demo Traveller",
+      full_name:
+        u.persona === "guest"
+          ? "Guest"
+          : u.persona === "admin"
+            ? "Demo Admin"
+            : "Demo Traveller",
       avatar_url: null,
       phone: null,
       country: null,

@@ -196,8 +196,15 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   body, prominent sticky price+CTA
 - ✅ `components/common/avatar.tsx`; swapped 3 mismatched demo photos
 - ✅ 50 unit / 2 E2E / build green
-- ⏭️ Still queued: reviews/testimonials on experiences, admin desktop sidebar +
-  proper charts (dataviz), per-day contextual refine, shared PriceBreakdown, dark-mode QA
+- ✅ **Admin desktop + analytics** — responsive shell (`components/admin/admin-sidebar.tsx`:
+  sticky icon sidebar on `lg+`, horizontal tab strip below); dataviz-quality
+  charts (`components/admin/analytics-charts.tsx`: weekly-bookings columns,
+  weekly-revenue area, status + top-experiences H-bars, hover tooltips);
+  `adminAnalytics()` in `lib/domain/admin.ts` (weekly buckets, 4-week deltas,
+  confirmed rate, AOV); deterministic 11-week seed history
+  (`lib/demo/seed-bookings.ts`) so the dashboard has shape on a fresh server
+- ⏭️ Still queued: reviews/testimonials on experiences, per-day contextual
+  refine, shared PriceBreakdown, dark-mode QA, admin date-range filter
 
 ## QA pass (professional-tester review)
 

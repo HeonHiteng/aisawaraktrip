@@ -1,89 +1,137 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
-import { Card, CardHeader } from "@/components/ui/card";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
-import { adminListBookings, adminStats } from "@/lib/domain/admin";
+import {
+  HBars,
+  WeeklyBookingsChart,
+  WeeklyRevenueChart,
+} from "@/components/admin/analytics-charts";
+import { adminAnalytics, adminListBookings } from "@/lib/domain/admin";
 import { formatDate, formatMYR } from "@/lib/format";
-import { BOOKING_STATUS_META } from "@/types/booking";
+import { BOOKING_STATUS_META, type BookingStatus } from "@/types/booking";
 
 export const metadata: Metadata = { title: "Admin overview" };
 
-const STATUS_ORDER = [
-  "pending",
-  "confirmed",
-  "completed",
-  "cancelled",
-  "refunded",
-] as const;
+const STATUS_COLOR: Record<BookingStatus, string> = {
+  pending: "var(--chart-4)",
+  confirmed: "var(--chart-3)",
+  completed: "var(--chart-1)",
+  cancelled: "color-mix(in oklch, var(--muted-foreground) 45%, transparent)",
+  refunded: "color-mix(in oklch, var(--muted-foreground) 70%, transparent)",
+};
+
+function pctDelta(cur: number, prev: number): number | null {
+  if (prev <= 0) return cur > 0 ? 1 : null;
+  return (cur - prev) / prev;
+}
+
+function StatTile({
+  label,
+  value,
+  delta,
+  sub,
+}: {
+  label: string;
+  value: string;
+  delta?: number | null;
+  sub?: string;
+}) {
+  const up = delta != null && delta >= 0;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-bold">{value}</p>
+      {delta != null ? (
+        <p
+          className={`mt-1 inline-flex items-center gap-0.5 text-xs font-medium ${
+            up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+          }`}
+        >
+          {up ? (
+            <ArrowUpRight className="size-3.5" />
+          ) : (
+            <ArrowDownRight className="size-3.5" />
+          )}
+          {Math.abs(delta * 100).toFixed(0)}% vs prev 4 weeks
+        </p>
+      ) : (
+        sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+      )}
+    </div>
+  );
+}
 
 export default async function AdminOverview() {
-  const [stats, bookings] = await Promise.all([
-    adminStats(),
+  const [a, bookings] = await Promise.all([
+    adminAnalytics(),
     adminListBookings(),
   ]);
-  const maxStatus = Math.max(1, ...Object.values(stats.byStatus));
   const recent = bookings.slice(0, 6);
 
-  const tiles = [
-    { label: "Experiences", value: stats.experiences, sub: `${stats.publishedExperiences} live` },
-    { label: "Vendors", value: stats.vendors, sub: `${stats.unverifiedVendors} to verify` },
-    { label: "Attractions", value: stats.attractions },
-    { label: "Bookings", value: stats.bookings, sub: `${stats.confirmedBookings} confirmed` },
-    { label: "Revenue (paid)", value: formatMYR(stats.revenue) },
-  ];
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {tiles.map((t) => (
-          <Card key={t.label}>
-            <CardHeader>
-              <p className="text-2xl font-bold">{t.value}</p>
-              <p className="text-xs text-muted-foreground">{t.label}</p>
-              {t.sub && (
-                <p className="text-[11px] text-muted-foreground">{t.sub}</p>
-              )}
-            </CardHeader>
-          </Card>
-        ))}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="Revenue (paid, 4 weeks)"
+          value={formatMYR(a.kpis.revenue4w)}
+          delta={pctDelta(a.kpis.revenue4w, a.kpis.revenuePrev4w)}
+        />
+        <StatTile
+          label="Bookings (4 weeks)"
+          value={String(a.kpis.bookings4w)}
+          delta={pctDelta(a.kpis.bookings4w, a.kpis.bookingsPrev4w)}
+        />
+        <StatTile
+          label="Confirmed rate"
+          value={`${(a.kpis.confirmedRate * 100).toFixed(0)}%`}
+          sub={`${a.kpis.bookings} bookings all-time`}
+        />
+        <StatTile
+          label="Avg booking value"
+          value={formatMYR(Math.round(a.kpis.avgBookingValue))}
+          sub={`${formatMYR(a.kpis.revenue)} paid all-time`}
+        />
       </div>
 
-      {stats.unverifiedVendors > 0 && (
+      {a.catalogue.unverifiedVendors > 0 && (
         <Link
           href="/admin/vendors"
           className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 hover:bg-amber-500/15 dark:text-amber-400"
         >
           <AlertTriangle className="size-4" />
-          {stats.unverifiedVendors} vendor
-          {stats.unverifiedVendors === 1 ? "" : "s"} awaiting verification
+          {a.catalogue.unverifiedVendors} vendor
+          {a.catalogue.unverifiedVendors === 1 ? "" : "s"} awaiting verification
         </Link>
       )}
 
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Bookings by status</h2>
-        <div className="mt-4 space-y-2">
-          {STATUS_ORDER.map((s) => {
-            const n = stats.byStatus[s] ?? 0;
-            return (
-              <div key={s} className="flex items-center gap-3 text-xs">
-                <span className="w-20 shrink-0 capitalize text-muted-foreground">
-                  {s}
-                </span>
-                <div className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-brand-gradient"
-                    style={{ width: `${(n / maxStatus) * 100}%` }}
-                  />
-                </div>
-                <span className="w-6 text-right font-medium">{n}</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WeeklyBookingsChart data={a.weekly} />
+        <WeeklyRevenueChart data={a.weekly} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <HBars
+          title="Bookings by status"
+          hint="all-time"
+          items={a.byStatus.map((s) => ({
+            label: s.label,
+            value: s.count,
+            color: STATUS_COLOR[s.status],
+          }))}
+        />
+        <HBars
+          title="Top experiences"
+          hint="by paid revenue"
+          items={a.topExperiences.map((e) => ({
+            label: e.title,
+            value: e.revenue,
+            display: formatMYR(e.revenue),
+          }))}
+        />
+      </div>
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">

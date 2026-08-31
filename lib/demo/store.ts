@@ -4,6 +4,7 @@ import type { Payment } from "@/types/payment";
 import type { Trip } from "@/types/trip";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
 import { buildItinerary } from "@/lib/ai/itinerary";
+import { buildSeedHistory, SEED_USER_ID } from "@/lib/demo/seed-bookings";
 
 /**
  * In-memory store for demo mode. Survives across requests within one running
@@ -17,8 +18,17 @@ interface UserStore {
 
 const g = globalThis as unknown as {
   __demoStore?: Map<string, UserStore>;
+  __demoSeeded?: boolean;
 };
 g.__demoStore ??= new Map<string, UserStore>();
+
+// Historical bookings/payments so the admin dashboard has a real shape on a
+// fresh server. Lives under a synthetic user that never signs in.
+if (!g.__demoSeeded) {
+  g.__demoSeeded = true;
+  const { bookings, payments } = buildSeedHistory();
+  g.__demoStore.set(SEED_USER_ID, { trips: [], bookings, payments });
+}
 
 function seedTrip(userId: string): Trip {
   const start = new Date();

@@ -346,18 +346,194 @@ export async function adminListUsers(): Promise<AdminUser[]> {
 
 // ---------- analytics ----------
 
-export async function adminStats() {
-  if (DEMO_MODE) {
-    const cs = catalogueStore();
-    const bookings = allDemoBookings();
-    const paidRevenue = allDemoPayments()
-      .filter((p) => p.status === "paid")
-      .reduce((s, p) => s + p.amount, 0);
+const STATUS_ORDER: BookingStatus[] = [
+  "pending",
+  "confirmed",
+  "completed",
+  "cancelled",
+  "refunded",
+];
 
-    const byStatus: Record<string, number> = {};
-    for (const b of bookings) byStatus[b.status] = (byStatus[b.status] ?? 0) + 1;
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  pending: "Awaiting payment",
+  confirmed: "Confirmed",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
 
+/** Monday 00:00 of the week containing `d`. */
+function startOfWeek(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = (x.getDay() + 6) % 7; // 0 = Monday
+  x.setDate(x.getDate() - day);
+  return x;
+}
+
+export interface AdminAnalytics {
+  catalogue: {
+    experiences: number;
+    publishedExperiences: number;
+    vendors: number;
+    unverifiedVendors: number;
+    attractions: number;
+  };
+  kpis: {
+    revenue: number;
+    revenue4w: number;
+    revenuePrev4w: number;
+    bookings: number;
+    bookings4w: number;
+    bookingsPrev4w: number;
+    confirmedRate: number;
+    avgBookingValue: number;
+  };
+  weekly: {
+    weekStart: string;
+    label: string;
+    bookings: number;
+    revenue: number;
+  }[];
+  byStatus: { status: BookingStatus; label: string; count: number }[];
+  topExperiences: { title: string; bookings: number; revenue: number }[];
+}
+
+const EMPTY_ANALYTICS: AdminAnalytics = {
+  catalogue: {
+    experiences: 0,
+    publishedExperiences: 0,
+    vendors: 0,
+    unverifiedVendors: 0,
+    attractions: 0,
+  },
+  kpis: {
+    revenue: 0,
+    revenue4w: 0,
+    revenuePrev4w: 0,
+    bookings: 0,
+    bookings4w: 0,
+    bookingsPrev4w: 0,
+    confirmedRate: 0,
+    avgBookingValue: 0,
+  },
+  weekly: [],
+  byStatus: STATUS_ORDER.map((s) => ({
+    status: s,
+    label: STATUS_LABEL[s],
+    count: 0,
+  })),
+  topExperiences: [],
+};
+
+const WEEKS = 10;
+
+export async function adminAnalytics(): Promise<AdminAnalytics> {
+  if (!DEMO_MODE) return EMPTY_ANALYTICS;
+
+  const cs = catalogueStore();
+  const bookings = allDemoBookings();
+  const paidPayments = allDemoPayments().filter((p) => p.status === "paid");
+
+  const now = new Date();
+  const currentWeek = startOfWeek(now);
+
+  // --- weekly buckets (last WEEKS weeks, oldest first) ---
+  const weekly = Array.from({ length: WEEKS }, (_, i) => {
+    const start = new Date(currentWeek);
+    start.setDate(start.getDate() - (WEEKS - 1 - i) * 7);
     return {
+      weekStart: start.toISOString().slice(0, 10),
+      label: start.toLocaleDateString("en-MY", {
+        day: "numeric",
+        month: "short",
+      }),
+      bookings: 0,
+      revenue: 0,
+      _start: start.getTime(),
+      _end: start.getTime() + 7 * 86_400_000,
+    };
+  });
+  const bucketFor = (iso: string | null) => {
+    if (!iso) return undefined;
+    const t = new Date(iso).getTime();
+    return weekly.find((w) => t >= w._start && t < w._end);
+  };
+  for (const b of bookings) {
+    const w = bucketFor(b.createdAt);
+    if (w) w.bookings += 1;
+  }
+  for (const p of paidPayments) {
+    const w = bucketFor(p.paidAt);
+    if (w) w.revenue += p.amount;
+  }
+
+  // --- KPIs ---
+  const fourWeeksAgo = currentWeek.getTime() - 4 * 7 * 86_400_000;
+  const eightWeeksAgo = currentWeek.getTime() - 8 * 7 * 86_400_000;
+  const inRange = (iso: string | null, from: number, to: number) => {
+    if (!iso) return false;
+    const t = new Date(iso).getTime();
+    return t >= from && t < to;
+  };
+
+  const revenue = paidPayments.reduce((s, p) => s + p.amount, 0);
+  const revenue4w = paidPayments
+    .filter((p) => inRange(p.paidAt, fourWeeksAgo, Date.now()))
+    .reduce((s, p) => s + p.amount, 0);
+  const revenuePrev4w = paidPayments
+    .filter((p) => inRange(p.paidAt, eightWeeksAgo, fourWeeksAgo))
+    .reduce((s, p) => s + p.amount, 0);
+
+  const bookings4w = bookings.filter((b) =>
+    inRange(b.createdAt, fourWeeksAgo, Date.now()),
+  ).length;
+  const bookingsPrev4w = bookings.filter((b) =>
+    inRange(b.createdAt, eightWeeksAgo, fourWeeksAgo),
+  ).length;
+
+  const settled = bookings.filter(
+    (b) => b.status === "confirmed" || b.status === "completed",
+  ).length;
+  const confirmedRate = bookings.length ? settled / bookings.length : 0;
+  const avgBookingValue = paidPayments.length
+    ? revenue / paidPayments.length
+    : 0;
+
+  // --- by status ---
+  const statusCount = new Map<BookingStatus, number>();
+  for (const b of bookings)
+    statusCount.set(b.status, (statusCount.get(b.status) ?? 0) + 1);
+  const byStatus = STATUS_ORDER.map((s) => ({
+    status: s,
+    label: STATUS_LABEL[s],
+    count: statusCount.get(s) ?? 0,
+  }));
+
+  // --- top experiences by paid revenue ---
+  const bookingById = new Map(bookings.map((b) => [b.id, b]));
+  const perExp = new Map<string, { title: string; bookings: number; revenue: number }>();
+  for (const b of bookings) {
+    const e = perExp.get(b.experienceId) ?? {
+      title: b.experienceTitle,
+      bookings: 0,
+      revenue: 0,
+    };
+    e.bookings += 1;
+    perExp.set(b.experienceId, e);
+  }
+  for (const p of paidPayments) {
+    const b = bookingById.get(p.bookingId);
+    if (!b) continue;
+    const e = perExp.get(b.experienceId);
+    if (e) e.revenue += p.amount;
+  }
+  const topExperiences = [...perExp.values()]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 6);
+
+  return {
+    catalogue: {
       experiences: cs.experiences.length,
       publishedExperiences: cs.experiences.filter((e) => e.isPublished).length,
       vendors: cs.vendors.length,
@@ -365,21 +541,24 @@ export async function adminStats() {
         (v) => v.verificationStatus !== "verified",
       ).length,
       attractions: cs.attractions.length,
+    },
+    kpis: {
+      revenue,
+      revenue4w,
+      revenuePrev4w,
       bookings: bookings.length,
-      confirmedBookings: bookings.filter((b) => b.status === "confirmed").length,
-      revenue: paidRevenue,
-      byStatus,
-    };
-  }
-  return {
-    experiences: 0,
-    publishedExperiences: 0,
-    vendors: 0,
-    unverifiedVendors: 0,
-    attractions: 0,
-    bookings: 0,
-    confirmedBookings: 0,
-    revenue: 0,
-    byStatus: {} as Record<string, number>,
+      bookings4w,
+      bookingsPrev4w,
+      confirmedRate,
+      avgBookingValue,
+    },
+    weekly: weekly.map((w) => ({
+      weekStart: w.weekStart,
+      label: w.label,
+      bookings: w.bookings,
+      revenue: w.revenue,
+    })),
+    byStatus,
+    topExperiences,
   };
 }

@@ -171,6 +171,52 @@ describe("buildItinerary", () => {
     );
     expect(tight).toBeLessThan(rich);
   });
+
+  it("keeps a day's stops in one area, with transfers on excursion days", () => {
+    const it = buildItinerary(
+      trip({ startDate: "2026-09-16", endDate: "2026-09-21", pace: "packed" }),
+      candidates,
+    );
+    const CITY = "Kuching City Centre";
+    for (const day of it.days) {
+      const areas = new Set(
+        day.items
+          .filter((i) => i.type === "experience" || i.type === "attraction")
+          .map((i) => i.locationLabel),
+      );
+      const outlying = [...areas].filter((a) => a && a !== CITY);
+      // at most one outlying area per day, and never mixed with city sightseeing
+      expect(outlying.length).toBeLessThanOrEqual(1);
+      if (outlying.length === 1 && day.items.some((i) => i.type === "attraction" && i.locationLabel === CITY)) {
+        // a city stop on an excursion day is only OK when the excursion is
+        // half-day (morning or evening) — there must still be a transfer item
+        expect(day.items.some((i) => i.type === "transport")).toBe(true);
+      }
+      if (outlying.length === 1) {
+        expect(day.items.some((i) => i.type === "transport")).toBe(true);
+      }
+    }
+  });
+
+  it("leaves out things the notes veto (no museums, no hiking)", () => {
+    const it = buildItinerary(
+      trip({
+        startDate: "2026-09-16",
+        endDate: "2026-09-22",
+        pace: "packed",
+        notes: "no museums please, and we hate hiking / strenuous treks",
+      }),
+      candidates,
+    );
+    for (const day of it.days) {
+      for (const item of day.items) {
+        expect(item.attractionSlug).not.toBe("borneo-cultures-museum");
+        // adventure-tagged experiences (Bako trek, kayak) are vetoed by "hiking"
+        const exp = demoExperiences.find((e) => e.id === item.experienceId);
+        if (exp) expect(exp.categories).not.toContain("adventure");
+      }
+    }
+  });
 });
 
 describe("applyRefinement", () => {

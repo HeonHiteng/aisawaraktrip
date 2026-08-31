@@ -5,9 +5,9 @@ import { Sparkles } from "lucide-react";
 
 const STEPS = [
   "Reading your trip…",
-  "Finding experiences that match your interests…",
-  "Pulling in verified local attractions…",
-  "Laying out each day…",
+  "Matching verified experiences to your interests…",
+  "Grouping city days and day trips…",
+  "Timing each day and adding transfers…",
   "Checking it against your budget…",
   "Almost there…",
 ];

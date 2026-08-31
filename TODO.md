@@ -293,6 +293,32 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   vs bookable-date reconciliation; "trip confirmed" summary (calendar/share);
   one-shot plan-from-sentence; Explore↔trip `?trip=&day=` threading.
 
+## Planner + schedule quality pass
+
+- ✅ **Geography-aware days.** `buildItinerary` now shapes each full day as a
+  **city day** or a **day trip** to one outlying area (Santubong / Bako /
+  Semenggoh / Padawan), never mixed. Full-day, evening (Santubong cruise) and
+  morning (Semenggoh, feeding-timed) excursions each get their own pattern; the
+  free morning/afternoon windows draw only from the day's area. Back-to-back
+  excursions are broken up with a city day.
+- ✅ **Transfers.** `transport` items ("Transfer to Bako · ~55 min · ~RM100")
+  bracket every excursion — travel time is now on the timeline and in the budget.
+- ✅ **Notes are honoured.** `parseTripPrompt` extracts avoidances from negated
+  clauses ("no museums", "we hate hiking", "not into shopping") → category / slug
+  vetoes that filter the candidate pools. The trip hero echoes "You asked for: …".
+- ✅ **Arrival day earns an evening experience** (e.g. the 17:30 food walk) so
+  short trips aren't experience-free; a 2-day trip now gets ≥ 1 experience.
+- ✅ **Better copy** — per-item "why" lines (specific, category-accurate) and day
+  summaries that name the area + headline; neutral meal copy.
+- ✅ **"Make it cheaper"** now trims only the single priciest day (was stripping
+  every tour off the trip).
+- +5 unit tests (avoid parsing, area coherence + transfers, note vetoes);
+  golden-path E2E refine step switched to "Add more food" (guarantees a bookable
+  item) with an exact "Book" locator. 70 unit / 4 e2e / build green.
+- ⏭️ Deferred: children/elderly → downweight strenuous experiences; per-area
+  half-day pairing (Semenggoh + a Santubong stop); one-shot plan-from-sentence;
+  the real Claude call (`lib/ai/generate.ts`, needs the API key).
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

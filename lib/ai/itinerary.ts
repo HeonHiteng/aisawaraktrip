@@ -12,6 +12,7 @@ import type {
 } from "@/types/trip";
 import { tripNights } from "@/types/trip";
 import { weekdayKey } from "@/lib/format";
+import { parseTripPrompt } from "@/lib/plan/parse-prompt";
 
 export interface Candidates {
   experiences: Experience[];
@@ -29,6 +30,21 @@ const CAT_LABEL: Record<CategorySlug, string> = {
 };
 
 const OUTDOOR: CategorySlug[] = ["nature", "adventure", "wildlife"];
+
+/** The old town / base. Everything else is a drive out. */
+const CITY = "Kuching City Centre";
+
+/** Rough transfer from the city to each outlying area (private car / Grab). */
+const TRAVEL: Record<string, { minutes: number; groupCost: number }> = {
+  "Santubong & Damai": { minutes: 45, groupCost: 90 },
+  Bako: { minutes: 55, groupCost: 100 },
+  Semenggoh: { minutes: 40, groupCost: 70 },
+  "Padawan & Annah Rais": { minutes: 60, groupCost: 110 },
+};
+
+function areaName(loc: { name: string } | null | undefined): string {
+  return loc?.name ?? CITY;
+}
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -107,10 +123,46 @@ function scoreAtt(a: Attraction, interests: CategorySlug[]): number {
   return (interests.length ? m * 10 : 5) + (a.isFree ? 1 : 0);
 }
 
-function why(cats: CategorySlug[], interests: CategorySlug[]): string {
+const WHY_BY_SLUG: Record<string, string> = {
+  "kuching-waterfront":
+    "An easy first walk to get your bearings — riverfront, food stalls and sunset over the fort.",
+  "borneo-cultures-museum":
+    "The best single primer on Sarawak's peoples and rainforest before you head out of town.",
+  "fort-margherita":
+    "A short sampan crossing to the Brooke-era fort — history plus rooftop views of the old town.",
+  "tua-pek-kong-temple":
+    "Kuching's oldest Chinese temple — a five-minute stop that anchors the old town.",
+  "semenggoh-nature-reserve":
+    "Timed for a feeding session, for the best odds of seeing the semi-wild orang-utans.",
+  "bako-national-park":
+    "Coastal rainforest and near-guaranteed proboscis monkeys, a short boat ride from the jetty.",
+  "sarawak-cultural-village":
+    "Seven traditional dwellings in one place, with a cultural show — a solid half-day near Santubong.",
+  "main-bazaar-carpenter-street":
+    "Heritage shophouses for pua kumbu, pepper and beadwork, plus Carpenter Street's coffee shops.",
+  "kuching-heritage-street-food-walk":
+    "A guided tasting crawl of the old town — the fastest way into Sarawak's food.",
+  "sarawak-laksa-kolo-mee-cooking-class":
+    "Hands-on with the two dishes you'll want to recreate at home.",
+  "santubong-sunset-wildlife-river-cruise":
+    "Dolphins, proboscis monkeys and fireflies as the light goes — an easy afternoon out.",
+  "bako-national-park-full-day-trek":
+    "A naturalist-guided day in Bako, with trails matched to your fitness.",
+  "sarawak-kiri-river-kayaking-semadang":
+    "Beginner-friendly paddling through Padawan rainforest, with a village lunch.",
+  "annah-rais-longhouse-bidayuh-culture-day":
+    "A full day hosted by a Bidayuh family at a living longhouse — respectful and community-run.",
+};
+
+function why(
+  slug: string | null,
+  cats: CategorySlug[],
+  interests: CategorySlug[],
+): string {
+  if (slug && WHY_BY_SLUG[slug]) return WHY_BY_SLUG[slug];
   const m = matched(cats, interests).map((c) => CAT_LABEL[c]);
-  if (m.length) return `Matches your interest in ${m.join(" & ")}.`;
-  return "A Kuching highlight worth making time for.";
+  if (m.length) return `Picked for your interest in ${m.join(" and ")}.`;
+  return "A well-rated Kuching stop that rounds out the day.";
 }
 
 // ---- item builders ----
@@ -129,7 +181,7 @@ function expItem(
     durationMinutes: e.durationMinutes,
     title: e.title,
     description: e.summary ?? e.description ?? "",
-    whyRecommended: why(e.categories, trip.interests),
+    whyRecommended: why(e.slug, e.categories, trip.interests),
     estimatedCost: e.pricePerPerson * pax(trip),
     locationLabel: e.location?.name ?? "Sarawak",
     attractionSlug: null,
@@ -152,7 +204,7 @@ function attItem(
     durationMinutes: a.avgVisitMinutes,
     title: a.name,
     description: a.summary ?? a.description ?? "",
-    whyRecommended: why(a.categories, trip.interests),
+    whyRecommended: why(a.slug, a.categories, trip.interests),
     estimatedCost: unit * pax(trip),
     locationLabel: a.location?.name ?? "Sarawak",
     attractionSlug: a.slug,
@@ -211,6 +263,30 @@ function freeTime(start: string, label: string): ItineraryItem {
   };
 }
 
+function transportItem(
+  start: string,
+  area: string,
+  minutes: number,
+  groupCost: number,
+  direction: "out" | "back",
+): ItineraryItem {
+  return {
+    id: uid(),
+    type: "transport",
+    startTime: start,
+    endTime: addMinutes(start, minutes),
+    durationMinutes: minutes,
+    title: direction === "out" ? `Transfer to ${area}` : "Drive back to Kuching",
+    description: `About ${minutes} minutes by private car or Grab.`,
+    whyRecommended: null,
+    estimatedCost: groupCost, // per vehicle, not per person
+    locationLabel: direction === "out" ? area : CITY,
+    attractionSlug: null,
+    experienceId: null,
+    bookable: false,
+  };
+}
+
 // ---- generator ----
 
 export function buildItinerary(
@@ -221,25 +297,43 @@ export function buildItinerary(
   const budgetTight =
     trip.budgetPerPerson != null && trip.budgetPerPerson < 900;
 
-  const exps = [...candidates.experiences]
-    .filter((e) =>
-      trip.interests.length
-        ? matched(e.categories, trip.interests).length > 0
-        : true,
-    )
-    .sort((a, b) => scoreExp(b, trip.interests) - scoreExp(a, trip.interests));
+  // Things the traveller asked to leave out, parsed from the free-text notes.
+  const avoid = parseTripPrompt(trip.notes ?? "").avoid ?? {
+    categories: [],
+    slugs: [],
+  };
+  const avoidCat = new Set(avoid.categories);
+  const avoidSlug = new Set(avoid.slugs);
+  const wanted = (slug: string, cats: CategorySlug[]) =>
+    !avoidSlug.has(slug) && !cats.some((c) => avoidCat.has(c));
 
-  const atts = [...candidates.attractions]
-    .filter((a) =>
-      trip.interests.length
-        ? matched(a.categories, trip.interests).length > 0
-        : true,
-    )
+  const byInterest = <T extends { categories: CategorySlug[] }>(pool: T[]) =>
+    trip.interests.length
+      ? pool.filter((x) => matched(x.categories, trip.interests).length > 0)
+      : pool;
+
+  const expScoped = byInterest([...candidates.experiences]);
+  const attScoped = byInterest([...candidates.attractions]);
+
+  // fall back to the full set if the interest filter emptied a pool, THEN drop
+  // anything the traveller vetoed (no fallback past a veto).
+  const expPool = (expScoped.length ? expScoped : [...candidates.experiences])
+    .filter((e) => wanted(e.slug, e.categories))
+    .sort((a, b) => scoreExp(b, trip.interests) - scoreExp(a, trip.interests));
+  const attPool = (attScoped.length ? attScoped : [...candidates.attractions])
+    .filter((a) => wanted(a.slug, a.categories))
     .sort((a, b) => scoreAtt(b, trip.interests) - scoreAtt(a, trip.interests));
 
-  // fall back to everything if interest filter emptied a pool
-  const expPool = exps.length ? exps : [...candidates.experiences];
-  const attPool = atts.length ? atts : [...candidates.attractions];
+  // The full set minus vetoes — used for arrival/departure filler where any
+  // sensible stop will do, even if it doesn't match a stated interest.
+  const attAll = [
+    ...attPool,
+    ...candidates.attractions.filter(
+      (a) =>
+        wanted(a.slug, a.categories) &&
+        !attPool.some((p) => p.slug === a.slug),
+    ),
+  ];
 
   const usedExp = new Set<string>();
   const usedAtt = new Set<string>();
@@ -247,9 +341,19 @@ export function buildItinerary(
     expPool.find((e) => !usedExp.has(e.id) && (!pred || pred(e))) ?? null;
   const peekAtt = (pred?: (a: Attraction) => boolean) =>
     attPool.find((a) => !usedAtt.has(a.slug) && (!pred || pred(a))) ?? null;
+  const peekAny = (pred: (a: Attraction) => boolean) =>
+    attAll.find((a) => !usedAtt.has(a.slug) && pred(a)) ?? null;
+
+  const catsFor = (item: ItineraryItem): CategorySlug[] =>
+    item.experienceId
+      ? (expPool.find((e) => e.id === item.experienceId)?.categories ?? [])
+      : item.attractionSlug
+        ? (attPool.find((a) => a.slug === item.attractionSlug)?.categories ?? [])
+        : [];
 
   const maxExps = budgetTight ? 1 : trip.pace === "packed" ? nights + 1 : nights;
   let usedExps = 0;
+  let prevExcursion = false;
 
   const days: ItineraryDay[] = [];
 
@@ -278,133 +382,256 @@ export function buildItinerary(
       items.push(it);
       occupied.push([it.startTime, it.endTime]);
     };
+    const semenggohStart = (slot: "am" | "pm") =>
+      slot === "am" ? "08:45" : "15:00";
 
     const first = d === 1;
     const last = d === nights && nights > 1;
 
+    // ---------- arrival day ----------
     if (first) {
-      const a = peekAtt((x) => !attClosedOn(x, weekday));
+      const a = peekAny(
+        (x) => !attClosedOn(x, weekday) && areaName(x.location) === CITY,
+      );
       if (a) addAtt(a, "15:00");
-      addFixed(mealItem("19:00", "dinner", trip));
+      // an evening city experience (e.g. the food walk) beats just a dinner
+      const eve =
+        usedExps < maxExps
+          ? peekExp(
+              (e) =>
+                areaName(e.location) === CITY &&
+                expRunsOn(e, weekday) &&
+                expStartTime(e, "18:00") >= "16:30",
+            )
+          : null;
+      if (eve) addExp(eve, "18:00");
+      // a second short old-town stop if there's a gap before dinner
+      if (isFree("16:15", "17:15")) {
+        const b = peekAny(
+          (x) =>
+            !attClosedOn(x, weekday) &&
+            areaName(x.location) === CITY &&
+            x.avgVisitMinutes <= 60,
+        );
+        if (b) addAtt(b, "16:15");
+      }
+      const hasFoodExp = items.some(
+        (i) => i.type === "experience" && catsFor(i).includes("food"),
+      );
+      if (!hasFoodExp) addFixed(mealItem("19:00", "dinner", trip));
+      prevExcursion = false;
       days.push({
         dayNumber: d,
         date,
-        summary: "Arrival and a gentle first look at Kuching.",
+        summary: eve
+          ? "Arrive, drop your bags, and head straight into the old town."
+          : "Arrival and a gentle first look at Kuching.",
         items: sortByTime(items),
       });
       continue;
     }
 
+    // ---------- departure day ----------
     if (last) {
-      const a = peekAtt((x) => !attClosedOn(x, weekday));
+      const a = peekAny(
+        (x) => !attClosedOn(x, weekday) && areaName(x.location) === CITY,
+      );
       if (a) addAtt(a, "09:30");
       addFixed(mealItem("12:30", "lunch", trip));
       days.push({
         dayNumber: d,
         date,
-        summary: "A last morning, then onward travel.",
+        summary: "A last morning in the old town, then onward travel.",
         items: sortByTime(items),
       });
       continue;
     }
 
-    // ---- full day ----
-    // 1) the day's headline experience, at its real start time, on a day it runs
+    // ---------- a full day ----------
+    // Anchor selection:
+    //  - excursions (an outlying experience, or a lighter outlying attraction)
+    //    make the strongest days, but back-to-back day trips are tiring, so
+    //    after an excursion we try a city day first.
+    //  - a tight budget skips excursions entirely — the private transfers and
+    //    pricier day tours are where the money goes.
+    let dayArea = CITY;
     let placedExp = false;
-    if (usedExps < maxExps) {
-      const e = peekExp((x) => expRunsOn(x, weekday));
-      if (e) {
-        addExp(e, "09:00");
-        placedExp = true;
+    const preferCity =
+      prevExcursion && trip.pace !== "packed" && !budgetTight;
+
+    const pickOutExp = () =>
+      usedExps < maxExps && !budgetTight
+        ? peekExp((e) => expRunsOn(e, weekday) && areaName(e.location) !== CITY)
+        : null;
+    const pickCityExp = () =>
+      usedExps < maxExps
+        ? peekExp((e) => expRunsOn(e, weekday) && areaName(e.location) === CITY)
+        : null;
+
+    let anchorExp: Experience | null = null;
+    let anchorIsExcursion = false;
+    if (preferCity) {
+      anchorExp = pickCityExp();
+      if (!anchorExp) {
+        anchorExp = pickOutExp();
+        anchorIsExcursion = !!anchorExp;
+      }
+    } else {
+      anchorExp = pickOutExp();
+      anchorIsExcursion = !!anchorExp;
+      if (!anchorExp) anchorExp = pickCityExp();
+    }
+
+    if (anchorExp) {
+      if (anchorIsExcursion) dayArea = areaName(anchorExp.location);
+      addExp(anchorExp, "09:00");
+      placedExp = true;
+    } else if (!budgetTight && !preferCity) {
+      const outAtt = peekAtt(
+        (a) => !attClosedOn(a, weekday) && areaName(a.location) !== CITY,
+      );
+      if (outAtt) {
+        dayArea = areaName(outAtt.location);
+        addAtt(
+          outAtt,
+          outAtt.slug === "semenggoh-nature-reserve"
+            ? semenggohStart("am")
+            : "09:30",
+        );
       }
     }
 
-    // 2) a second experience on packed / alternating days — only if it fits
-    if (usedExps < maxExps && (trip.pace === "packed" || d % 2 === 0)) {
-      const e = peekExp((x) => {
-        if (!expRunsOn(x, weekday)) return false;
-        const s = expStartTime(x, "14:30");
-        return isFree(s, addMinutes(s, x.durationMinutes));
+    const anchor = items[0];
+    const excursion = dayArea !== CITY;
+    const morningExcursion =
+      excursion && (anchor?.endTime ?? "23:59") <= "13:00";
+    const eveningExcursion =
+      excursion && (anchor?.startTime ?? "00:00") >= "14:00";
+    // which area the free morning / afternoon windows draw from
+    const morningArea = eveningExcursion ? CITY : dayArea;
+    const afternoonArea = morningExcursion ? CITY : dayArea;
+
+    // a second same-area experience on packed / longer city days
+    if (
+      usedExps < maxExps &&
+      !morningExcursion &&
+      (trip.pace === "packed" || (!excursion && d % 2 === 0))
+    ) {
+      const e2 = peekExp((e) => {
+        if (!expRunsOn(e, weekday) || areaName(e.location) !== dayArea)
+          return false;
+        const s = expStartTime(e, "14:30");
+        return isFree(s, addMinutes(s, e.durationMinutes));
       });
-      if (e) addExp(e, "14:30");
+      if (e2) addExp(e2, "14:30");
     }
 
-    // 3) lunch, if the midday window is open
-    if (isFree("12:30", "13:30")) addFixed(mealItem("12:30", "lunch", trip));
-
-    // 4) a morning stop, if there's room before noon
+    // fill the open morning / afternoon windows with area-matched stops
     if (isFree("09:30", "12:00")) {
       const a = peekAtt(
         (x) =>
           !attClosedOn(x, weekday) &&
+          areaName(x.location) === morningArea &&
           isFree("09:30", addMinutes("09:30", x.avgVisitMinutes)),
       );
-      if (a) addAtt(a, "09:30");
+      if (a)
+        addAtt(
+          a,
+          a.slug === "semenggoh-nature-reserve" ? semenggohStart("am") : "09:30",
+        );
     }
-
-    // 5) the afternoon — another stop, or open time on a relaxed day
     if (isFree("14:30", "17:00")) {
       const a = peekAtt(
         (x) =>
           !attClosedOn(x, weekday) &&
+          areaName(x.location) === afternoonArea &&
           isFree("14:30", addMinutes("14:30", x.avgVisitMinutes)),
       );
-      if (a) addAtt(a, "14:30");
-      else if (trip.pace === "relaxed" || !placedExp)
-        addFixed(freeTime("14:30", "Free afternoon"));
+      if (a)
+        addAtt(
+          a,
+          a.slug === "semenggoh-nature-reserve" ? semenggohStart("pm") : "14:30",
+        );
+      else if (afternoonArea === CITY && (trip.pace === "relaxed" || !placedExp))
+        addFixed(freeTime("14:30", "Free time in the old town"));
     }
 
-    // 6) make sure the traveller eats — unless a food experience covers dinner
-    const dinnerCovered = items.some((i) => {
-      if (i.type !== "experience") return false;
-      const e = expPool.find((x) => x.id === i.experienceId);
-      return (
-        !!e &&
-        e.categories.includes("food") &&
-        overlaps(i.startTime, i.endTime, "18:00", "21:00")
-      );
-    });
+    // lunch, if the midday window is open
+    if (isFree("12:30", "13:30")) addFixed(mealItem("12:30", "lunch", trip));
+
+    // make sure the traveller eats — unless a food experience covers dinner
+    const dinnerCovered = items.some(
+      (i) =>
+        i.type === "experience" &&
+        catsFor(i).includes("food") &&
+        overlaps(i.startTime, i.endTime, "18:00", "21:00"),
+    );
     if (!items.some((i) => i.type === "meal") && !dinnerCovered) {
       const slot = firstFreeSlot(
         occupied,
         ["19:00", "19:30", "18:30", "20:00", "13:00", "12:00", "20:30"],
         75,
       );
-      if (slot) {
+      if (slot)
         addFixed(mealItem(slot, slot >= "15:00" ? "dinner" : "lunch", trip));
-      }
     }
 
-    // 7) a packed day earns an evening stop, if there's still room
-    if (trip.pace === "packed" && isFree("18:30", "20:30")) {
+    // a packed CITY day earns an evening stop
+    if (!excursion && trip.pace === "packed" && isFree("18:30", "20:30")) {
       const a = peekAtt(
         (x) =>
           !attClosedOn(x, weekday) &&
+          areaName(x.location) === CITY &&
           isFree("18:30", addMinutes("18:30", x.avgVisitMinutes)),
       );
       if (a) addAtt(a, "18:30");
     }
 
-    const themeCats = items
-      .flatMap((i) =>
-        i.experienceId
-          ? (expPool.find((e) => e.id === i.experienceId)?.categories ?? [])
-          : i.attractionSlug
-            ? (attPool.find((a) => a.slug === i.attractionSlug)?.categories ??
-              [])
-            : [],
-      )
-      .map((c) => CAT_LABEL[c]);
-    const uniqueTheme = [...new Set(themeCats)].slice(0, 2);
+    // transfers in and out of the excursion area
+    if (excursion && TRAVEL[dayArea]) {
+      const t = TRAVEL[dayArea];
+      const areaItems = items.filter((i) => i.locationLabel === dayArea);
+      if (areaItems.length) {
+        const starts = areaItems.map((i) => i.startTime).sort();
+        const ends = areaItems.map((i) => i.endTime).sort();
+        const outStart = addMinutes(starts[0], -(t.minutes + 15));
+        const backStart = ends[ends.length - 1];
+        if (outStart >= "05:00")
+          addFixed(
+            transportItem(outStart, dayArea, t.minutes, t.groupCost, "out"),
+          );
+        if (
+          backStart <= "18:30" &&
+          isFree(backStart, addMinutes(backStart, t.minutes))
+        )
+          addFixed(
+            transportItem(backStart, dayArea, t.minutes, t.groupCost, "back"),
+          );
+      }
+    }
 
-    days.push({
-      dayNumber: d,
-      date,
-      summary: uniqueTheme.length
-        ? `A day around ${uniqueTheme.join(" and ")}.`
-        : "Exploring more of Kuching and around.",
-      items: sortByTime(items),
-    });
+    // ---- day summary ----
+    const headline =
+      items.find((i) => i.type === "experience") ??
+      items.find((i) => i.type === "attraction");
+    let summary: string;
+    if (excursion) {
+      summary = headline
+        ? `Day trip to ${dayArea} — ${headline.title}.`
+        : `A day out around ${dayArea}.`;
+    } else if (headline?.type === "experience") {
+      summary = `${headline.title}, with time in the old town.`;
+    } else {
+      const themes = [
+        ...new Set(items.flatMap((i) => catsFor(i)).map((c) => CAT_LABEL[c])),
+      ].slice(0, 2);
+      summary = themes.length
+        ? `Kuching old town — ${themes.join(" and ")}.`
+        : "Exploring Kuching's old town.";
+    }
+
+    prevExcursion = excursion;
+    days.push({ dayNumber: d, date, summary, items: sortByTime(items) });
   }
 
   const interestStr = trip.interests.length
@@ -469,11 +696,24 @@ export function applyRefinement(
 ): RefineResult {
   const text = instruction.toLowerCase();
   const total = itinerary.days.length;
+  const explicitDay = /day\s*\d|tomorrow|today|first day/i.test(text);
   const targets = new Set(targetDays(text, total));
   const notes: string[] = [];
   const px = pax(trip);
 
   const wantsCheaper = /cheap|budget|less expensive|save|afford/.test(text);
+
+  // "make it cheaper" with no day named: trim only the single priciest day, so
+  // it doesn't strip every bookable tour off the trip.
+  if (wantsCheaper && !explicitDay) {
+    const priciest = [...itinerary.days].sort(
+      (a, b) =>
+        b.items.reduce((s, i) => s + i.estimatedCost, 0) -
+        a.items.reduce((s, i) => s + i.estimatedCost, 0),
+    )[0];
+    targets.clear();
+    if (priciest) targets.add(priciest.dayNumber);
+  }
   const wantsFood = /food|eat|culinar|hawker|restaurant|cuisine|laksa/.test(text);
   const noOutdoor =
     /no outdoor|indoor|not outdoor|avoid outdoor|less outdoor|rain|too hot/.test(

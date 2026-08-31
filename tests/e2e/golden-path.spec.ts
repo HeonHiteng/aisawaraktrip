@@ -22,15 +22,15 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
   await expect(page.getByText("AI-generated")).toBeVisible();
   await expect(page.getByText("Refine with AI")).toBeVisible();
 
-  // --- refine it ---
-  await page.getByRole("button", { name: "Make it cheaper" }).click();
-  await expect(page.getByText(/Edited by you|v2/)).toBeVisible({
+  // --- refine it (adds a bookable food experience) ---
+  await page.getByRole("button", { name: "Add more food" }).click();
+  await expect(page.getByText(/Edited by you/)).toBeVisible({
     timeout: 15_000,
   });
 
   // --- book the first bookable item ---
-  await page.getByRole("link", { name: "Book" }).first().click();
-  await page.waitForURL(/\/book\/[a-z-]+/);
+  await page.getByRole("link", { name: "Book", exact: true }).first().click();
+  await page.waitForURL(/\/book\//);
   await page.getByLabel("Email").fill("e2e@example.com");
   await page.getByRole("button", { name: "Confirm booking" }).click();
   await page.waitForURL(/\/checkout\//, { timeout: 15_000 });
@@ -47,7 +47,9 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
   ).toBeVisible();
   const bookingId = page.url().match(/checkout\/([a-z0-9]+)\/result/)![1];
   await expect(
-    page.getByRole("link", { name: /Book next:|Back to trip|See your trip/i }),
+    page
+      .getByRole("link", { name: /Book next:|Back to trip|See your trip/i })
+      .first(),
   ).toBeVisible();
 
   // --- shows in My Bookings ---

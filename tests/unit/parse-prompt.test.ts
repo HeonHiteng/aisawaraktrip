@@ -42,4 +42,25 @@ describe("parseTripPrompt", () => {
   it("caps trip length at 14 days", () => {
     expect(parseTripPrompt("30 days in Sarawak").days).toBe(14);
   });
+
+  it("extracts avoidances from negated clauses", () => {
+    const r = parseTripPrompt(
+      "3 days, love food, but no museums and we hate hiking",
+    );
+    expect(r.avoid?.slugs).toContain("borneo-cultures-museum");
+    expect(r.avoid?.categories).toContain("adventure");
+    // the positive interest still comes through
+    expect(r.interests).toContain("food");
+  });
+
+  it("does not treat 'no rush' as an avoidance", () => {
+    const r = parseTripPrompt("no rush, we love food and shopping");
+    expect(r.avoid).toBeUndefined();
+    expect(r.interests).toEqual(expect.arrayContaining(["food", "shopping"]));
+  });
+
+  it("maps 'not into shopping' to a category avoidance", () => {
+    const r = parseTripPrompt("relaxed trip, not into shopping or markets");
+    expect(r.avoid?.categories).toContain("shopping");
+  });
 });

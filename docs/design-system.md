@@ -76,8 +76,20 @@ Pill. Unselected: `border border-border text-muted-foreground`.
 Selected: `bg-primary text-primary-foreground` + a check icon.
 
 ### Primary CTA
-Full-width, pill, `bg-brand-gradient text-white`, leading `Sparkles` icon for AI actions.
+`<Button variant="brand">` (or `buttonVariants({ variant: "brand" })` for links) —
+violet→magenta gradient, white text. Full-width + `size="lg"` for page-level CTAs,
+leading `Sparkles` icon for AI actions. Never hand-roll `bg-brand-gradient text-white`
+on a button — use the variant so hover/focus stay consistent.
 Normal actions use the default `<Button>` (solid violet).
+
+### Empty states
+One component: `components/common/empty-state.tsx` — soft `bg-accent` icon chip,
+short title, one line of guidance, optional brand action button. Use it everywhere;
+never a bare `border-dashed` box.
+
+### Destructive actions
+`components/common/confirm-submit.tsx` — a ghost trigger that arms an inline
+confirm row (prompt + `destructive` submit + "Keep it"). No single-tap deletes.
 
 ### Form rows (planner inputs)
 Inside a white card: `flex items-center gap-3 rounded-xl bg-muted px-3 py-2` —

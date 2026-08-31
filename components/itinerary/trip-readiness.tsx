@@ -9,7 +9,6 @@ export function TripReadiness({
   total: number;
 }) {
   const done = booked >= total;
-  const pct = Math.round((booked / total) * 100);
 
   return (
     <div
@@ -17,7 +16,7 @@ export function TripReadiness({
         "rounded-2xl border p-4",
         done
           ? "border-emerald-500/30 bg-emerald-500/10"
-          : "border-border bg-card",
+          : "border-border bg-card shadow-card",
       )}
     >
       <div className="flex items-center gap-2 text-sm font-semibold">
@@ -32,13 +31,24 @@ export function TripReadiness({
       </div>
       {!done && (
         <>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-brand-gradient"
-              style={{ width: `${pct}%` }}
-            />
+          <div
+            className="mt-2.5 flex gap-1"
+            role="progressbar"
+            aria-valuenow={booked}
+            aria-valuemin={0}
+            aria-valuemax={total}
+          >
+            {Array.from({ length: total }).map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-2 flex-1 rounded-full transition-colors",
+                  i < booked ? "bg-brand-gradient" : "bg-muted",
+                )}
+              />
+            ))}
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground">
             Tap “Book” on the experiences below to lock in your spots.
           </p>
         </>

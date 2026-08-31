@@ -3,10 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, RefreshCw, Trash2, Users } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  StatusBadge,
-  TRIP_STATUS_TONE,
-} from "@/components/common/status-badge";
+import { StatusBadge } from "@/components/common/status-badge";
+import { ConfirmSubmit } from "@/components/common/confirm-submit";
+import { EmptyState } from "@/components/common/empty-state";
 import { BudgetBar } from "@/components/itinerary/budget-bar";
 import { DayCard } from "@/components/itinerary/day-card";
 import { RefineBox } from "@/components/itinerary/refine-box";
@@ -17,7 +16,7 @@ import { getTrip } from "@/lib/domain/trips";
 import { formatDateRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { BookingStatus } from "@/types/booking";
-import { itineraryTotal, tripNights } from "@/types/trip";
+import { itineraryTotal, tripNights, TRIP_STATUS_META } from "@/types/trip";
 import {
   deleteTripAction,
   regenerateTrip,
@@ -75,9 +74,9 @@ export default async function TripDetailPage({
         <div className="flex items-start justify-between gap-3">
           <h1 className="text-xl font-bold leading-tight">{trip.title}</h1>
           <StatusBadge
-            label={trip.status}
-            tone={TRIP_STATUS_TONE[trip.status] ?? "muted"}
-            className="bg-white/15 capitalize text-white"
+            label={(TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned).label}
+            tone={(TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned).tone}
+            className="bg-white/15 text-white"
           />
         </div>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/75">
@@ -95,8 +94,8 @@ export default async function TripDetailPage({
           <p className="mt-2 text-xs text-white/70">
             {trip.itinerary.generatedBy === "ai"
               ? "AI-generated"
-              : "Edited by you"}{" "}
-            · v{trip.itinerary.version} · {trip.itinerary.requestSummary}
+              : "Edited by you"}
+            {trip.itinerary.version > 1 ? " · revised" : ""}
           </p>
         )}
       </div>
@@ -140,24 +139,25 @@ export default async function TripDetailPage({
             >
               Add from Explore
             </Link>
-            <form action={deleteTripAction} className="ml-auto">
-              <input type="hidden" name="tripId" value={trip.id} />
-              <Button
-                type="submit"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-                Delete
-              </Button>
-            </form>
+            <div className="ml-auto">
+              <ConfirmSubmit
+                action={deleteTripAction}
+                hidden={{ tripId: trip.id }}
+                triggerLabel="Delete"
+                triggerIcon={<Trash2 className="size-4" />}
+                promptLabel="Delete this trip and its itinerary?"
+                confirmLabel="Delete trip"
+                pendingLabel="Deleting…"
+              />
+            </div>
           </div>
         </>
       ) : (
-        <p className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          This trip has no itinerary yet.
-        </p>
+        <EmptyState
+          icon={CalendarDays}
+          title="No itinerary yet"
+          description="Regenerate this trip to build a day-by-day plan."
+        />
       )}
     </div>
   );

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { Ticket } from "lucide-react";
 import { BookingCard } from "@/components/booking/booking-card";
+import { EmptyState } from "@/components/common/empty-state";
 import { requireUser } from "@/lib/auth";
 import { listBookings } from "@/lib/domain/bookings";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "My Bookings" };
 
@@ -25,17 +24,12 @@ export default async function BookingsPage() {
       <h1 className="text-2xl font-bold tracking-tight">My Bookings</h1>
 
       {bookings.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No bookings yet. Find something to do in Explore.
-          </p>
-          <Link
-            href="/explore"
-            className={cn(buttonVariants(), "mt-4 bg-brand-gradient text-white")}
-          >
-            Explore experiences
-          </Link>
-        </div>
+        <EmptyState
+          icon={Ticket}
+          title="No bookings yet"
+          description="When you book an experience, it'll show up here with your confirmation and details."
+          action={{ label: "Browse experiences", href: "/explore" }}
+        />
       ) : (
         <>
           {upcoming.length > 0 && (

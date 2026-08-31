@@ -54,7 +54,8 @@ export function CheckoutForm({ bookingId }: { bookingId: string }) {
         type="submit"
         size="lg"
         disabled={pending}
-        className="w-full bg-brand-gradient text-white"
+        variant="brand"
+        className="w-full"
       >
         {pending ? "Opening payment…" : "Continue to payment"}
       </Button>

@@ -20,7 +20,6 @@ import { Avatar } from "@/components/common/avatar";
 import { CategoryBadges } from "@/components/explore/category-badges";
 import { getExperience } from "@/lib/domain/catalogue";
 import { formatDays, formatDuration, formatMYR } from "@/lib/format";
-import { cn } from "@/lib/utils";
 
 export async function generateMetadata({
   params,
@@ -173,10 +172,7 @@ export default async function ExperiencePage({
           </p>
           <Link
             href={`/book/${exp.id}`}
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "bg-brand-gradient text-white",
-            )}
+            className={buttonVariants({ variant: "brand", size: "lg" })}
           >
             Book now
           </Link>

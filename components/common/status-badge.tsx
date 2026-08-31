@@ -31,11 +31,3 @@ export function StatusBadge({
     </span>
   );
 }
-
-export const TRIP_STATUS_TONE: Record<string, Tone> = {
-  draft: "muted",
-  planned: "violet",
-  booked: "green",
-  completed: "blue",
-  archived: "muted",
-};

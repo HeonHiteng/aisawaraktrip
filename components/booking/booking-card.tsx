@@ -9,7 +9,7 @@ export function BookingCard({ booking }: { booking: Booking }) {
   return (
     <Link
       href={`/bookings/${booking.id}`}
-      className="block rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-lg hover:shadow-primary/5"
+      className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold leading-snug">{booking.experienceTitle}</h3>

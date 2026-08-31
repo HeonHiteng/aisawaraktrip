@@ -70,7 +70,7 @@ export default async function PaymentResultPage({
       <div className="flex flex-col gap-2">
         <Link
           href={`/bookings/${bookingId}`}
-          className={cn(buttonVariants({ size: "lg" }), "bg-brand-gradient text-white")}
+          className={buttonVariants({ variant: "brand", size: "lg" })}
         >
           View booking
         </Link>

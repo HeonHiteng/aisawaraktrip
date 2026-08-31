@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { MapPinned, Sparkles } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { TripCard } from "@/components/trips/trip-card";
+import { EmptyState } from "@/components/common/empty-state";
 import { requireUser } from "@/lib/auth";
 import { listTrips } from "@/lib/domain/trips";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ export default async function TripsPage() {
         <h1 className="text-2xl font-bold tracking-tight">My Trips</h1>
         <Link
           href="/plan"
-          className={cn(buttonVariants({ size: "sm" }), "bg-brand-gradient text-white")}
+          className={cn(buttonVariants({ variant: "brand", size: "sm" }))}
         >
           <Sparkles className="size-4" />
           New trip
@@ -27,21 +28,12 @@ export default async function TripsPage() {
       </div>
 
       {trips.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No trips yet. Generate your first Kuching itinerary.
-          </p>
-          <Link
-            href="/plan"
-            className={cn(
-              buttonVariants(),
-              "mt-4 bg-brand-gradient text-white",
-            )}
-          >
-            <Sparkles className="size-4" />
-            Plan a trip
-          </Link>
-        </div>
+        <EmptyState
+          icon={MapPinned}
+          title="No trips yet"
+          description="Tell the planner your dates, budget and interests — it builds a day-by-day Kuching itinerary from verified places."
+          action={{ label: "Plan a trip", href: "/plan" }}
+        />
       ) : (
         <div className="space-y-4">
           {trips.map((t) => (

@@ -333,7 +333,8 @@ export function TripForm({
         <Button
           type="submit"
           disabled={pending}
-          className="w-full bg-brand-gradient text-white"
+          variant="brand"
+          className="w-full"
           size="lg"
         >
           <Sparkles className="size-4" />

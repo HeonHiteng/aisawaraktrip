@@ -65,7 +65,8 @@ export default async function MockGatewayPage({
           <Button
             type="submit"
             size="lg"
-            className="w-full bg-brand-gradient text-white"
+            variant="brand"
+            className="w-full"
           >
             <ShieldCheck className="size-4" />
             Approve payment

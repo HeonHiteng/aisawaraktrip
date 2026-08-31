@@ -53,11 +53,7 @@ export function RefineBox({ tripId }: { tripId: string }) {
           disabled={pending}
           className="bg-background"
         />
-        <Button
-          type="submit"
-          disabled={pending}
-          className="bg-brand-gradient text-white"
-        >
+        <Button type="submit" variant="brand" disabled={pending}>
           <Sparkles className="size-4" />
           {pending ? "…" : "Go"}
         </Button>

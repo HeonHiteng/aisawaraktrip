@@ -15,6 +15,7 @@ import { listBookings } from "@/lib/domain/bookings";
 import { demoCategories } from "@/lib/demo/fixtures";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { TRIP_STATUS_META } from "@/types/trip";
 
 export const metadata: Metadata = { title: "Home" };
 
@@ -53,7 +54,7 @@ export default async function HomePage() {
       {/* Plan CTA */}
       <Link
         href="/plan"
-        className="block overflow-hidden rounded-2xl bg-brand-hero p-5 text-white"
+        className="group block overflow-hidden rounded-2xl bg-brand-hero p-5 text-white transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         <Sparkles className="size-6" />
         <p className="mt-3 text-lg font-semibold">Plan a trip with AI</p>
@@ -62,7 +63,8 @@ export default async function HomePage() {
           verified Sarawak places.
         </p>
         <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium">
-          Start planning <ArrowRight className="size-4" />
+          Start planning
+          <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
         </span>
       </Link>
 
@@ -72,22 +74,26 @@ export default async function HomePage() {
           {activeTrip && (
             <Link
               href={`/trips/${activeTrip.id}`}
-              className="rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
+              className="group flex flex-col rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <p className="text-xs font-medium text-muted-foreground">
                 Continue planning
               </p>
               <p className="mt-0.5 font-semibold">{activeTrip.title}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {formatDate(activeTrip.startDate, { year: "numeric" })} ·{" "}
-                {activeTrip.status}
+                {(TRIP_STATUS_META[activeTrip.status] ?? TRIP_STATUS_META.planned).label}
               </p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                Open trip
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </Link>
           )}
           {nextBooking && (
             <Link
               href={`/bookings/${nextBooking.id}`}
-              className="rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-md"
+              className="group flex flex-col rounded-2xl border border-border bg-card p-4 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <p className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                 <CalendarClock className="size-3.5" /> Your next experience
@@ -95,10 +101,14 @@ export default async function HomePage() {
               <p className="mt-0.5 font-semibold">
                 {nextBooking.experienceTitle}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 {formatDate(nextBooking.bookingDate, { year: "numeric" })} ·{" "}
                 {nextBooking.startTime}
               </p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
+                View booking
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </Link>
           )}
         </div>
@@ -130,7 +140,7 @@ export default async function HomePage() {
             <Link
               key={c.slug}
               href={`/explore?cat=${c.slug}`}
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {c.name}
             </Link>

@@ -30,40 +30,45 @@ export function ProfileForm({ email, fullName, phone, country }: Props) {
 
   return (
     <form action={formAction} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" value={email} disabled readOnly />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="fullName">Full name</Label>
-        <Input
-          id="fullName"
-          name="fullName"
-          defaultValue={fullName}
-          required
-          disabled={pending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone</Label>
-        <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          defaultValue={phone}
-          placeholder="+60…"
-          disabled={pending}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="country">Country</Label>
-        <Input
-          id="country"
-          name="country"
-          defaultValue={country}
-          placeholder="e.g. Singapore"
-          disabled={pending}
-        />
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" value={email} disabled readOnly />
+          <p className="text-xs text-muted-foreground">
+            Your email can&apos;t be changed here.
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="fullName">Full name</Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            defaultValue={fullName}
+            required
+            disabled={pending}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="phone">Phone</Label>
+          <Input
+            id="phone"
+            name="phone"
+            type="tel"
+            defaultValue={phone}
+            placeholder="+60…"
+            disabled={pending}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="country">Country</Label>
+          <Input
+            id="country"
+            name="country"
+            defaultValue={country}
+            placeholder="e.g. Singapore"
+            disabled={pending}
+          />
+        </div>
       </div>
 
       {state.error && (
@@ -71,13 +76,14 @@ export function ProfileForm({ email, fullName, phone, country }: Props) {
           {state.error}
         </p>
       )}
-      {state.message && (
-        <p className="text-sm text-primary" role="status">
-          {state.message}
-        </p>
-      )}
 
-      <Button type="submit" disabled={pending}>
+      <Button
+        type="submit"
+        variant="brand"
+        size="lg"
+        className="w-full"
+        disabled={pending}
+      >
         {pending ? "Saving…" : "Save changes"}
       </Button>
     </form>

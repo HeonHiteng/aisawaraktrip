@@ -224,6 +224,35 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   8-attraction demo pool, so late days repeat "Free afternoon". Options: lower
   the cap (`lib/validation/trip.ts`, currently 14) or add more fixtures.
 
+## Design & frontend polish pass
+
+- ✅ **`brand` button variant** — one `<Button variant="brand">` / `buttonVariants`
+  replaces ~13 hand-rolled `bg-brand-gradient text-white` combos (consistent
+  hover/focus).
+- ✅ **`<EmptyState>`** (`components/common/empty-state.tsx`) — icon chip + title +
+  guidance + action; replaces bare `border-dashed` boxes on Bookings, Trips,
+  Trip detail.
+- ✅ **`<ConfirmSubmit>`** (`components/common/confirm-submit.tsx`) — inline
+  two-step confirm for destructive actions; wired to Cancel booking + Delete trip
+  (previously single-tap, no undo).
+- ✅ **Trip status labels** — `TRIP_STATUS_META` (proper labels + tones), used on
+  trip cards, trip detail, home; no more lowercased enum strings.
+- ✅ **Card elevation** — TripCard / BookingCard / home cards moved to the v2
+  `shadow-card → hover:shadow-float + -translate-y-0.5` language + focus-visible
+  rings.
+- ✅ **a11y** — `aria-current="page"` on the active bottom-nav tab; focus-visible
+  rings on nav, card links, interest chips; `role="progressbar"` on trip readiness.
+- ✅ **Trip readiness** — segmented track (one pill per experience) instead of an
+  empty bar that read as broken at 0 booked.
+- ✅ **Profile** — fields now in a card (matched the rest of the app), full-width
+  brand CTA, "email can't be changed here" helper.
+- ✅ **Trip card meta** — flex-wrap row; fixes the date-range line breaking mid-value
+  at 375px.
+- ✅ **Trip detail** — dropped the `v{n} · {requestSummary}` debug-looking line.
+- ⏭️ Deferred (needs a design call): trip-list cards all share the heavy dark
+  header (hard to scan a list); trip detail stacks 3 cards before the itinerary;
+  itinerary time-slotting shows an evening walk at 09:00.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

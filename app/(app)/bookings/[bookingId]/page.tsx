@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarClock, CheckCircle2, CreditCard, MapPin } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
+import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { requireUser } from "@/lib/auth";
 import { getBooking } from "@/lib/domain/bookings";
 import { formatDate, formatMYR } from "@/lib/format";
@@ -54,8 +55,8 @@ export default async function BookingDetailPage({
             <Link
               href={`/checkout/${b.id}`}
               className={cn(
-                buttonVariants({ size: "sm" }),
-                "mt-2 bg-brand-gradient text-white",
+                buttonVariants({ variant: "brand", size: "sm" }),
+                "mt-2",
               )}
             >
               <CreditCard className="size-4" />
@@ -142,10 +143,7 @@ export default async function BookingDetailPage({
         {b.status === "pending" && (
           <Link
             href={`/checkout/${b.id}`}
-            className={cn(
-              buttonVariants({ size: "sm" }),
-              "bg-brand-gradient text-white",
-            )}
+            className={buttonVariants({ variant: "brand", size: "sm" })}
           >
             <CreditCard className="size-4" />
             Pay now
@@ -153,22 +151,16 @@ export default async function BookingDetailPage({
         )}
 
         {canCancel && (
-          <form action={cancelBooking} className="ml-auto">
-            <input type="hidden" name="bookingId" value={b.id} />
-            <input
-              type="hidden"
-              name="reason"
-              value="Cancelled by traveller"
+          <div className="ml-auto">
+            <ConfirmSubmit
+              action={cancelBooking}
+              hidden={{ bookingId: b.id, reason: "Cancelled by traveller" }}
+              triggerLabel="Cancel booking"
+              promptLabel="Cancel this booking? This can't be undone."
+              confirmLabel="Yes, cancel"
+              pendingLabel="Cancelling…"
             />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-            >
-              Cancel booking
-            </Button>
-          </form>
+          </div>
         )}
       </div>
     </div>

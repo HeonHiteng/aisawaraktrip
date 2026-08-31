@@ -34,8 +34,9 @@ export function AppNav() {
             <li key={href} className="flex-1">
               <Link
                 href={href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
+                  "flex flex-col items-center gap-1 rounded-lg py-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",

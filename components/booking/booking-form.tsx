@@ -230,7 +230,8 @@ export function BookingForm(props: Props) {
         type="submit"
         disabled={pending || !!paxError || !!dateWarning}
         size="lg"
-        className="w-full bg-brand-gradient text-white"
+        variant="brand"
+        className="w-full"
       >
         {pending ? "Confirming…" : "Confirm booking"}
       </Button>

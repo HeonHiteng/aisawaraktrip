@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export default function NotFound() {
   return (
@@ -10,7 +9,7 @@ export default function NotFound() {
       <p className="max-w-sm text-sm text-muted-foreground">
         The page you&apos;re looking for doesn&apos;t exist or has moved.
       </p>
-      <Link href="/" className={cn(buttonVariants(), "bg-brand-gradient text-white")}>
+      <Link href="/" className={buttonVariants({ variant: "brand" })}>
         Back to home
       </Link>
     </div>

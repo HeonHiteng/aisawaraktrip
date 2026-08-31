@@ -14,6 +14,17 @@ export type TripStatus =
   | "completed"
   | "archived";
 
+export const TRIP_STATUS_META: Record<
+  TripStatus,
+  { label: string; tone: "muted" | "violet" | "green" | "blue" }
+> = {
+  draft: { label: "Draft", tone: "muted" },
+  planned: { label: "Planned", tone: "violet" },
+  booked: { label: "Booked", tone: "green" },
+  completed: { label: "Completed", tone: "blue" },
+  archived: { label: "Archived", tone: "muted" },
+};
+
 export interface TripInput {
   title: string;
   startDate: string; // yyyy-mm-dd

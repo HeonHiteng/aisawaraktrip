@@ -10,7 +10,6 @@ import {
   Languages,
   MapPin,
   ShieldCheck,
-  Star,
   Users,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,7 +17,12 @@ import { CoverImage } from "@/components/explore/cover-image";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { Avatar } from "@/components/common/avatar";
 import { CategoryBadges } from "@/components/explore/category-badges";
+import { Stars } from "@/components/reviews/stars";
+import { ReviewList } from "@/components/reviews/review-list";
+import { ReviewForm } from "@/components/reviews/review-form";
+import { getUser } from "@/lib/auth";
 import { getExperience } from "@/lib/domain/catalogue";
+import { canReview, listReviews, ratingSummary } from "@/lib/domain/reviews";
 import { formatDays, formatDuration, formatMYR } from "@/lib/format";
 
 export async function generateMetadata({
@@ -37,6 +41,14 @@ export default async function ExperiencePage({
   if (!exp) notFound();
 
   const img = exp.images[0];
+  const [summary, reviews, user] = await Promise.all([
+    ratingSummary(exp.id),
+    listReviews(exp.id),
+    getUser(),
+  ]);
+  const reviewGate = user
+    ? await canReview(user.id, exp.id)
+    : ({ ok: false, reason: "Sign in and book to leave a review." } as const);
 
   return (
     <div className="space-y-5">
@@ -66,14 +78,17 @@ export default async function ExperiencePage({
             <MapPin className="size-4" />
             {exp.location?.name ?? "Sarawak"}
           </span>
-          {exp.rating != null && (
-            <span className="inline-flex items-center gap-1 font-medium text-foreground">
-              <Star className="size-3.5 fill-amber-400 text-amber-400" />
-              {exp.rating.toFixed(1)}
+          {summary.count > 0 && (
+            <a
+              href="#reviews"
+              className="inline-flex items-center gap-1 font-medium text-foreground hover:underline"
+            >
+              <Stars value={summary.average} size="size-3.5" />
+              {summary.average.toFixed(1)}
               <span className="font-normal text-muted-foreground">
-                ({exp.reviewCount} reviews)
+                ({summary.count} review{summary.count === 1 ? "" : "s"})
               </span>
-            </span>
+            </a>
           )}
         </div>
       </div>
@@ -159,6 +174,31 @@ export default async function ExperiencePage({
             </div>
           )}
         </dl>
+      </section>
+
+      <section id="reviews" className="scroll-mt-20 space-y-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="text-base font-semibold">Traveller reviews</h2>
+          {summary.count > 0 && (
+            <span className="inline-flex items-center gap-1.5 text-sm">
+              <Stars value={summary.average} size="size-4" />
+              <span className="font-semibold">{summary.average.toFixed(1)}</span>
+              <span className="text-muted-foreground">
+                ({summary.count})
+              </span>
+            </span>
+          )}
+        </div>
+
+        {reviewGate.ok ? (
+          <ReviewForm experienceId={exp.id} slug={exp.slug} />
+        ) : (
+          <p className="rounded-xl border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+            {reviewGate.reason}
+          </p>
+        )}
+
+        <ReviewList reviews={reviews} />
       </section>
 
       {/* Sticky booking bar */}

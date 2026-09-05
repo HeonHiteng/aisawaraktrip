@@ -58,6 +58,13 @@ test("golden path: plan, book, pay, admin", async ({ page }) => {
   await page.goto(`/bookings/${bookingId}`);
   await expect(page.getByText(/Booking confirmed/).first()).toBeVisible();
 
+  // --- the experience page carries a reviews section ---
+  await page.getByRole("link", { name: "View experience" }).click();
+  await page.waitForURL(/\/explore\/experiences\//);
+  await expect(
+    page.getByRole("heading", { name: "Traveller reviews" }),
+  ).toBeVisible({ timeout: 15_000 });
+
   // --- admin can see and manage it ---
   await page.getByRole("button", { name: "Admin" }).click();
   await page.waitForURL(/\/admin/, { timeout: 15_000 });

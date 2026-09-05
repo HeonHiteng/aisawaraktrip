@@ -56,6 +56,7 @@ export async function deleteExperience(formData: FormData): Promise<void> {
   await adminDeleteExperience(String(formData.get("id") ?? ""));
   revalidatePath("/admin/experiences");
   revalidatePath("/explore");
+  redirect("/admin/experiences");
 }
 
 export async function toggleExperiencePublished(

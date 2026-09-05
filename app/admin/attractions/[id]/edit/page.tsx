@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttractionForm } from "@/components/admin/attraction-form";
+import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { adminGetAttraction } from "@/lib/domain/admin";
 import { demoLocations } from "@/lib/demo/fixtures";
-import { saveAttraction } from "@/app/admin/attractions/actions";
+import { deleteAttraction, saveAttraction } from "@/app/admin/attractions/actions";
 
 export const metadata: Metadata = { title: "Edit attraction" };
 
@@ -31,6 +32,17 @@ export default async function EditAttractionPage({
         locations={demoLocations}
         attraction={attraction}
       />
+
+      <div className="border-t border-border pt-5">
+        <ConfirmSubmit
+          action={deleteAttraction}
+          hidden={{ id: attraction.id }}
+          triggerLabel="Delete this attraction"
+          promptLabel="Delete this attraction? It disappears from Explore and any itineraries that reference it."
+          confirmLabel="Delete attraction"
+          pendingLabel="Deleting…"
+        />
+      </div>
     </div>
   );
 }

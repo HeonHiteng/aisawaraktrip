@@ -43,6 +43,8 @@ export async function deleteVendor(formData: FormData): Promise<void> {
   await requireAdmin();
   await adminDeleteVendor(String(formData.get("id") ?? ""));
   revalidatePath("/admin/vendors");
+  revalidatePath("/explore");
+  redirect("/admin/vendors");
 }
 
 export async function setVendorVerification(formData: FormData): Promise<void> {

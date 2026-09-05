@@ -48,6 +48,7 @@ export async function deleteAttraction(formData: FormData): Promise<void> {
   await adminDeleteAttraction(String(formData.get("id") ?? ""));
   revalidatePath("/admin/attractions");
   revalidatePath("/explore");
+  redirect("/admin/attractions");
 }
 
 export async function toggleAttractionPublished(

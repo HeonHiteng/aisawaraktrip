@@ -69,7 +69,16 @@ export default async function AdminBookingDetail({
           <div>
             <dt className="text-xs text-muted-foreground">Customer</dt>
             <dd className="font-medium">{b.customerName}</dd>
-            <dd className="text-xs text-muted-foreground">{b.customerEmail}</dd>
+            <dd className="text-xs">
+              <a
+                href={`mailto:${b.customerEmail}?subject=${encodeURIComponent(
+                  `Your booking ${b.id.toUpperCase()} — ${b.experienceTitle}`,
+                )}`}
+                className="text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              >
+                {b.customerEmail}
+              </a>
+            </dd>
             {b.customerPhone && (
               <dd className="text-xs text-muted-foreground">
                 {b.customerPhone}

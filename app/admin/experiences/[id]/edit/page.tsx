@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ExperienceForm } from "@/components/admin/experience-form";
+import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { adminGetExperience, adminListVendors } from "@/lib/domain/admin";
 import { demoLocations } from "@/lib/demo/fixtures";
-import { saveExperience } from "@/app/admin/experiences/actions";
+import { deleteExperience, saveExperience } from "@/app/admin/experiences/actions";
 
 export const metadata: Metadata = { title: "Edit experience" };
 
@@ -35,6 +36,17 @@ export default async function EditExperiencePage({
         locations={demoLocations}
         experience={experience}
       />
+
+      <div className="border-t border-border pt-5">
+        <ConfirmSubmit
+          action={deleteExperience}
+          hidden={{ id: experience.id }}
+          triggerLabel="Delete this experience"
+          promptLabel="Delete this experience? It disappears from Explore and any itineraries that reference it."
+          confirmLabel="Delete experience"
+          pendingLabel="Deleting…"
+        />
+      </div>
     </div>
   );
 }

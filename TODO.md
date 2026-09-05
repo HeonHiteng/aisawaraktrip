@@ -319,6 +319,32 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   half-day pairing (Semenggoh + a Santubong stop); one-shot plan-from-sentence;
   the real Claude call (`lib/ai/generate.ts`, needs the API key).
 
+## "Fix all 5" pass (from the second app analysis)
+
+- ✅ **Domain test coverage.** `lib/domain/{bookings,trips,admin,catalogue,reviews}`
+  had no direct unit tests despite being where a silent regression matters
+  most. +33 tests (price snapshot, weekday/pax gates, per-user isolation,
+  vendor-ref sync, admin any-transition, catalogue sort stability).
+- ✅ **Admin catalogue forms actually manage content.** Experience/attraction/
+  vendor forms never exposed images, includes, languages, cancellation policy,
+  or vendor avatar — a UI-created experience shipped with an empty gallery and
+  no "what's included" forever. `parseList()` in `lib/domain/admin.ts` splits
+  the new comma/newline fields; forms brought to the app's visual language.
+- ✅ **Explore sort.** `sort` URL param → Recommended / Top rated / Price
+  low→high / high→low, through `lib/domain/catalogue` (sorts a copy, never
+  mutates). "Top rated" hidden on Attractions (no rating field).
+- ✅ **Traveller reviews.** New `lib/domain/reviews.ts` + global reviews store
+  (5 seeded); `ratingSummary()` blends the catalogue baseline with in-app
+  reviews; one review per traveller per experience, gated on a confirmed/
+  completed booking. Experience detail page gets a reviews section (blended
+  rating, list, star+text form or the lock reason). +6 unit tests.
+- ✅ **Dark mode wired.** The full `.dark` token set existed but nothing applied
+  it. `components/theme-provider.tsx` (next-themes, system preference); Sonner
+  reads the real theme again; fixed one white-on-white pill. QA'd across the
+  key screens.
+- ⏭️ Follow-ups: a Light/System/Dark toggle (Profile → Account); update the
+  Explore/Home cards to the blended rating; per-review admin moderation.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

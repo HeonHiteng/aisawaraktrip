@@ -64,8 +64,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="bg-background text-foreground min-h-full flex flex-col">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}

@@ -345,6 +345,22 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ⏭️ Follow-ups: a Light/System/Dark toggle (Profile → Account); update the
   Explore/Home cards to the blended rating; per-review admin moderation.
 
+## Admin usability pass
+
+- ✅ **Deletes confirm.** One-click trash on the catalogue list rows removed;
+  Delete moved to the edit page as a two-step `<ConfirmSubmit>`; delete actions
+  redirect to the list.
+- ✅ **Bookings screen** — summary strip (total / pending / confirmed / settled
+  revenue), status filter chips + customer/email/ref search (URL-synced via
+  `components/admin/booking-filters.tsx`).
+- ✅ **Catalogue lists** — `CoverImage` thumbnails, `shadow-card`, brand "New"
+  buttons; vendors list floats pending/unverified to the top with an
+  "N awaiting review" cue + avatars.
+- ✅ `mailto:` (pre-filled subject) on the admin booking detail customer email.
+- ⏭️ Still queued: experiences/attractions list search + filter; admin
+  date-range filter on the dashboard; per-review moderation; real Supabase
+  service-role wiring for all `lib/domain/admin` writes.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

@@ -13,9 +13,12 @@ import type {
  * Admin-side reads (all rows) live in `lib/domain/admin`.
  */
 
+export type SortOption = "recommended" | "price-asc" | "price-desc" | "rating-desc";
+
 interface ListOpts {
   categories?: CategorySlug[];
   search?: string;
+  sort?: SortOption;
 }
 
 function matches(
@@ -38,10 +41,38 @@ function matches(
   return true;
 }
 
+function sortExperiences(list: Experience[], sort?: SortOption): Experience[] {
+  const sorted = [...list];
+  switch (sort) {
+    case "price-asc":
+      return sorted.sort((a, b) => a.pricePerPerson - b.pricePerPerson);
+    case "price-desc":
+      return sorted.sort((a, b) => b.pricePerPerson - a.pricePerPerson);
+    case "recommended":
+    case "rating-desc":
+    default:
+      return sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+  }
+}
+
+function sortAttractions(list: Attraction[], sort?: SortOption): Attraction[] {
+  const sorted = [...list];
+  switch (sort) {
+    case "price-asc":
+      return sorted.sort((a, b) => a.priceMin - b.priceMin);
+    case "price-desc":
+      return sorted.sort((a, b) => b.priceMin - a.priceMin);
+    default:
+      return sorted; // no rating field on attractions — keep catalogue order
+  }
+}
+
 export async function listExperiences(opts?: ListOpts): Promise<Experience[]> {
   if (DEMO_MODE) {
-    return catalogueStore()
-      .experiences.filter((e) => e.isPublished && matches(e, opts));
+    return sortExperiences(
+      catalogueStore().experiences.filter((e) => e.isPublished && matches(e, opts)),
+      opts?.sort,
+    );
   }
   // TODO(phase-3): supabase.from("experiences").select(...).eq("is_published", true)
   return [];
@@ -69,8 +100,10 @@ export async function getExperienceById(
 
 export async function listAttractions(opts?: ListOpts): Promise<Attraction[]> {
   if (DEMO_MODE) {
-    return catalogueStore()
-      .attractions.filter((a) => a.isPublished && matches(a, opts));
+    return sortAttractions(
+      catalogueStore().attractions.filter((a) => a.isPublished && matches(a, opts)),
+      opts?.sort,
+    );
   }
   return [];
 }

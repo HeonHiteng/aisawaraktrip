@@ -21,6 +21,7 @@ export function ExploreControls() {
   const tab = params.get("tab") === "attractions" ? "attractions" : "experiences";
   const activeCats = (params.get("cat") ?? "").split(",").filter(Boolean);
   const q = params.get("q") ?? "";
+  const sort = params.get("sort") ?? "recommended";
 
   const update = useCallback(
     (next: Record<string, string | null>) => {
@@ -99,6 +100,29 @@ export function ExploreControls() {
             </button>
           );
         })}
+      </div>
+
+      <div className="flex justify-end">
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          Sort
+          <select
+            aria-label="Sort results"
+            value={sort}
+            onChange={(e) =>
+              update({
+                sort: e.target.value === "recommended" ? null : e.target.value,
+              })
+            }
+            className="h-8 rounded-full border border-border bg-background px-3 text-xs font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
+          >
+            <option value="recommended">Recommended</option>
+            {tab === "experiences" && (
+              <option value="rating-desc">Top rated</option>
+            )}
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+          </select>
+        </label>
       </div>
     </div>
   );

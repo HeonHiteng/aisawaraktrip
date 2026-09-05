@@ -4,7 +4,10 @@ import { ExploreControls } from "@/components/explore/explore-controls";
 import { ExperienceCard } from "@/components/explore/experience-card";
 import { AttractionCard } from "@/components/explore/attraction-card";
 import { listAttractions, listExperiences } from "@/lib/domain/catalogue";
+import type { SortOption } from "@/lib/domain/catalogue";
 import type { CategorySlug } from "@/types/catalogue";
+
+const SORTS: SortOption[] = ["recommended", "price-asc", "price-desc", "rating-desc"];
 
 export const metadata: Metadata = { title: "Explore" };
 
@@ -26,8 +29,11 @@ export default async function ExplorePage({
   const search = typeof sp.q === "string" ? sp.q : undefined;
   const categories = (typeof sp.cat === "string" ? sp.cat.split(",") : [])
     .filter((c): c is CategorySlug => (CATS as string[]).includes(c));
+  const sort = SORTS.includes(sp.sort as SortOption)
+    ? (sp.sort as SortOption)
+    : "recommended";
 
-  const opts = { search, categories };
+  const opts = { search, categories, sort };
   const experiences = tab === "experiences" ? await listExperiences(opts) : [];
   const attractions = tab === "attractions" ? await listAttractions(opts) : [];
   const count = tab === "experiences" ? experiences.length : attractions.length;

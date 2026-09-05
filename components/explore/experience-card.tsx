@@ -33,7 +33,7 @@ export function ExperienceCard({ experience }: { experience: Experience }) {
           </span>
         )}
         {experience.rating != null && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-foreground">
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/95 px-2 py-1 text-[11px] font-semibold text-neutral-900">
             <Star className="size-3 fill-amber-400 text-amber-400" />
             {experience.rating.toFixed(1)}
           </span>

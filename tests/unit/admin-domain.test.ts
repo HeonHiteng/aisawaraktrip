@@ -56,6 +56,10 @@ function experienceInput(
     availabilityTimes: "09:00, 14:00",
     capacityPerSlot: 10,
     bookingLeadtimeHours: 24,
+    languages: "English",
+    includes: "",
+    cancellationPolicy: "",
+    images: "",
     isPublished: true,
     ...overrides,
   };
@@ -74,6 +78,7 @@ function attractionInput(overrides: Partial<AttractionForm> = {}): AttractionFor
     isFree: true,
     categories: ["heritage"],
     tips: "",
+    images: "",
     isPublished: true,
     ...overrides,
   };
@@ -115,6 +120,25 @@ describe("admin experiences", () => {
     const exp = await adminSaveExperience(experienceInput("nonexistent-vendor-id"));
     expect(exp.vendor.name).toBe("Unknown vendor");
   });
+
+  it("saves photos, included items and languages from the admin form", async () => {
+    const vendor = await adminSaveVendor(vendorInput());
+    const exp = await adminSaveExperience(
+      experienceInput(vendor.id, {
+        images: "https://example.com/a.jpg\nhttps://example.com/b.jpg",
+        includes: "Local guide\nBottled water",
+        languages: "English, Malay",
+        cancellationPolicy: "No refunds within 48 hours.",
+      }),
+    );
+    expect(exp.images.map((i) => i.url)).toEqual([
+      "https://example.com/a.jpg",
+      "https://example.com/b.jpg",
+    ]);
+    expect(exp.includes).toEqual(["Local guide", "Bottled water"]);
+    expect(exp.languages).toEqual(["English", "Malay"]);
+    expect(exp.cancellationPolicy).toBe("No refunds within 48 hours.");
+  });
 });
 
 describe("admin vendors", () => {
@@ -133,6 +157,13 @@ describe("admin vendors", () => {
     await adminDeleteVendor(vendor.id);
     expect(await adminGetVendor(vendor.id)).toBeNull();
     expect((await adminListVendors()).some((v) => v.id === vendor.id)).toBe(false);
+  });
+
+  it("saves an avatar URL from the admin form", async () => {
+    const vendor = await adminSaveVendor(
+      vendorInput({ avatarUrl: "https://example.com/logo.jpg" }),
+    );
+    expect(vendor.avatarUrl).toBe("https://example.com/logo.jpg");
   });
 });
 
@@ -159,6 +190,13 @@ describe("admin attractions", () => {
     const att = await adminSaveAttraction(attractionInput({ isFree: true, priceMin: 50, priceMax: 80 }));
     expect(att.priceMin).toBe(0);
     expect(att.priceMax).toBe(0);
+  });
+
+  it("saves photos from the admin form", async () => {
+    const att = await adminSaveAttraction(
+      attractionInput({ images: "https://example.com/att.jpg" }),
+    );
+    expect(att.images).toEqual([{ url: "https://example.com/att.jpg", alt: att.name }]);
   });
 });
 

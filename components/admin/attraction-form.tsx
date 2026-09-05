@@ -27,7 +27,7 @@ export function AttractionForm({
   return (
     <form action={formAction} className="space-y-4">
       {a && <input type="hidden" name="id" value={a.id} />}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
         <Field label="Name" htmlFor="name">
           <Input id="name" name="name" defaultValue={a?.name} required />
         </Field>
@@ -73,7 +73,7 @@ export function AttractionForm({
         </Field>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-3">
+      <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-card sm:grid-cols-3">
         <Field label="Typical visit (min)" htmlFor="avgVisitMinutes">
           <Input
             id="avgVisitMinutes"
@@ -104,9 +104,24 @@ export function AttractionForm({
         </Field>
       </div>
 
-      <Field label="Visitor tip" htmlFor="tips">
-        <Input id="tips" name="tips" defaultValue={a?.tips ?? ""} />
-      </Field>
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
+        <Field
+          label="Photos"
+          htmlFor="images"
+          hint="One image URL per line. The first is used as the cover photo."
+        >
+          <Textarea
+            id="images"
+            name="images"
+            rows={3}
+            placeholder="https://images.example.com/photo.jpg"
+            defaultValue={(a?.images ?? []).map((i) => i.url).join("\n")}
+          />
+        </Field>
+        <Field label="Visitor tip" htmlFor="tips">
+          <Input id="tips" name="tips" defaultValue={a?.tips ?? ""} />
+        </Field>
+      </div>
 
       <div className="flex flex-col gap-2 text-sm">
         <label className="flex items-center gap-2">
@@ -135,7 +150,7 @@ export function AttractionForm({
         </p>
       )}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" variant="brand" disabled={pending}>
         {pending ? "Saving…" : a ? "Save changes" : "Create attraction"}
       </Button>
     </form>

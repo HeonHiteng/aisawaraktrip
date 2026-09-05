@@ -40,7 +40,7 @@ export function ExperienceForm({
     <form action={formAction} className="space-y-5">
       {e && <input type="hidden" name="id" value={e.id} />}
 
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
         <Field label="Title" htmlFor="title">
           <Input id="title" name="title" defaultValue={e?.title} required />
         </Field>
@@ -102,7 +102,7 @@ export function ExperienceForm({
         </Field>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-card sm:grid-cols-2">
         <Field label="Price per person (MYR)" htmlFor="pricePerPerson">
           <Input
             id="pricePerPerson"
@@ -143,7 +143,7 @@ export function ExperienceForm({
         </Field>
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
         <Field label="Meeting point" htmlFor="meetingPoint">
           <Input
             id="meetingPoint"
@@ -191,6 +191,51 @@ export function ExperienceForm({
         </div>
       </div>
 
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
+        <Field
+          label="Photos"
+          htmlFor="images"
+          hint="One image URL per line. The first is used as the cover photo."
+        >
+          <Textarea
+            id="images"
+            name="images"
+            rows={3}
+            placeholder="https://images.example.com/photo.jpg"
+            defaultValue={(e?.images ?? []).map((i) => i.url).join("\n")}
+          />
+        </Field>
+        <Field
+          label="What's included"
+          htmlFor="includes"
+          hint="One item per line, e.g. Local guide"
+        >
+          <Textarea
+            id="includes"
+            name="includes"
+            rows={3}
+            defaultValue={(e?.includes ?? []).join("\n")}
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Languages" htmlFor="languages" hint="Comma-separated.">
+            <Input
+              id="languages"
+              name="languages"
+              defaultValue={(e?.languages ?? ["English"]).join(", ")}
+            />
+          </Field>
+          <Field label="Cancellation policy" htmlFor="cancellationPolicy">
+            <Input
+              id="cancellationPolicy"
+              name="cancellationPolicy"
+              defaultValue={e?.cancellationPolicy ?? ""}
+              placeholder="Free cancellation up to 24 hours before start."
+            />
+          </Field>
+        </div>
+      </div>
+
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
@@ -208,7 +253,7 @@ export function ExperienceForm({
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" variant="brand" disabled={pending}>
           {pending ? "Saving…" : e ? "Save changes" : "Create experience"}
         </Button>
       </div>

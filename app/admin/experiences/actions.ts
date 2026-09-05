@@ -35,6 +35,10 @@ export async function saveExperience(
     availabilityTimes: formData.get("availabilityTimes") ?? "",
     capacityPerSlot: formData.get("capacityPerSlot") ?? 1,
     bookingLeadtimeHours: formData.get("bookingLeadtimeHours") ?? 0,
+    languages: formData.get("languages") ?? "",
+    includes: formData.get("includes") ?? "",
+    cancellationPolicy: formData.get("cancellationPolicy") ?? "",
+    images: formData.get("images") ?? "",
     isPublished: formData.get("isPublished") ?? "",
   });
   if (!parsed.success) {

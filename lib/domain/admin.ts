@@ -21,6 +21,14 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+/** Split an admin textarea/input on commas or newlines into a clean list. */
+function parseList(s: string): string[] {
+  return s
+    .split(/[\n,]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 // ---------- experiences ----------
 
 export async function adminListExperiences(): Promise<Experience[]> {
@@ -43,10 +51,13 @@ export async function adminSaveExperience(
     : undefined;
   const vendor = store.vendors.find((v) => v.id === input.vendorId);
   const location = demoLocations.find((l) => l.id === input.locationId) ?? null;
-  const times = input.availabilityTimes
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
+  const times = parseList(input.availabilityTimes);
+  const languages = parseList(input.languages);
+  const includes = parseList(input.includes);
+  const images = parseList(input.images).map((url) => ({
+    url,
+    alt: input.title || null,
+  }));
 
   const record: Experience = {
     id: existing?.id ?? `exp-${uid()}`,
@@ -75,11 +86,11 @@ export async function adminSaveExperience(
     currency: "MYR",
     minPax: input.minPax,
     maxPax: input.maxPax,
-    languages: existing?.languages ?? ["English"],
-    includes: existing?.includes ?? [],
+    languages: languages.length ? languages : ["English"],
+    includes,
     meetingPoint: input.meetingPoint || null,
     cancellationPolicy:
-      existing?.cancellationPolicy ??
+      input.cancellationPolicy ||
       "Free cancellation up to 24 hours before start.",
     availability: {
       days: input.availabilityDays,
@@ -88,7 +99,7 @@ export async function adminSaveExperience(
     },
     bookingLeadtimeHours: input.bookingLeadtimeHours,
     categories: input.categories,
-    images: existing?.images ?? [],
+    images,
     rating: existing?.rating ?? null,
     reviewCount: existing?.reviewCount ?? 0,
     isSample: existing?.isSample ?? false,
@@ -149,7 +160,7 @@ export async function adminSaveVendor(input: VendorForm): Promise<Vendor> {
     contactEmail: input.contactEmail || null,
     contactPhone: input.contactPhone || null,
     verificationStatus: input.verificationStatus,
-    avatarUrl: existing?.avatarUrl ?? null,
+    avatarUrl: input.avatarUrl || null,
     isSample: existing?.isSample ?? false,
     isPublished: input.isPublished,
   };
@@ -238,7 +249,10 @@ export async function adminSaveAttraction(
     openingHours: existing?.openingHours ?? {},
     tips: input.tips || null,
     categories: input.categories,
-    images: existing?.images ?? [],
+    images: parseList(input.images).map((url) => ({
+      url,
+      alt: input.name || null,
+    })),
     isSample: existing?.isSample ?? false,
     isPublished: input.isPublished,
   };

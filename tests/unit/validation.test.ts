@@ -91,6 +91,10 @@ describe("experienceFormSchema", () => {
     availabilityTimes: "09:00",
     capacityPerSlot: "10",
     bookingLeadtimeHours: "24",
+    languages: "English",
+    includes: "",
+    cancellationPolicy: "",
+    images: "",
     isPublished: "on",
   };
 

@@ -47,6 +47,10 @@ export const experienceFormSchema = z
       .min(1, "Add at least one start time."),
     capacityPerSlot: z.coerce.number().int().min(1).max(500),
     bookingLeadtimeHours: z.coerce.number().int().min(0).max(720),
+    languages: z.string().trim().max(200),
+    includes: z.string().trim().max(1000),
+    cancellationPolicy: z.string().trim().max(300),
+    images: z.string().trim().max(2000),
     isPublished: checkbox,
   })
   .refine((v) => v.maxPax >= v.minPax, {
@@ -62,6 +66,7 @@ export const vendorFormSchema = z.object({
   locationName: z.string().trim().max(120),
   contactEmail: z.union([z.email(), z.literal("")]).optional(),
   contactPhone: z.string().trim().max(40),
+  avatarUrl: z.union([z.url(), z.literal("")]).optional(),
   verificationStatus: z.enum([
     "unverified",
     "pending",
@@ -85,6 +90,7 @@ export const attractionFormSchema = z.object({
   isFree: checkbox,
   categories: z.array(CATEGORY).min(1, "Pick at least one category.").max(7),
   tips: z.string().trim().max(500),
+  images: z.string().trim().max(2000),
   isPublished: checkbox,
 });
 export type AttractionForm = z.infer<typeof attractionFormSchema>;

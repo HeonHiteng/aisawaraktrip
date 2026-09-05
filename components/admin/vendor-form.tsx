@@ -26,7 +26,7 @@ export function VendorForm({
   return (
     <form action={formAction} className="space-y-4">
       {v && <input type="hidden" name="id" value={v.id} />}
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+      <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
         <Field label="Name" htmlFor="name">
           <Input id="name" name="name" defaultValue={v?.name} required />
         </Field>
@@ -76,6 +76,19 @@ export function VendorForm({
             />
           </Field>
         </div>
+        <Field
+          label="Logo / avatar URL"
+          htmlFor="avatarUrl"
+          hint="Leave blank to show initials instead."
+        >
+          <Input
+            id="avatarUrl"
+            name="avatarUrl"
+            type="url"
+            placeholder="https://images.example.com/logo.jpg"
+            defaultValue={v?.avatarUrl ?? ""}
+          />
+        </Field>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
@@ -94,7 +107,7 @@ export function VendorForm({
         </p>
       )}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" variant="brand" disabled={pending}>
         {pending ? "Saving…" : v ? "Save changes" : "Create vendor"}
       </Button>
     </form>

@@ -30,6 +30,7 @@ export async function saveAttraction(
     isFree: formData.get("isFree") ?? "",
     categories: formData.getAll("categories"),
     tips: formData.get("tips") ?? "",
+    images: formData.get("images") ?? "",
     isPublished: formData.get("isPublished") ?? "",
   });
   if (!parsed.success) {

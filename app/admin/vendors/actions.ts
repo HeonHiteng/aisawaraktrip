@@ -25,6 +25,7 @@ export async function saveVendor(
     locationName: formData.get("locationName") ?? "",
     contactEmail: formData.get("contactEmail") ?? "",
     contactPhone: formData.get("contactPhone") ?? "",
+    avatarUrl: formData.get("avatarUrl") || undefined,
     verificationStatus: formData.get("verificationStatus") ?? "unverified",
     isPublished: formData.get("isPublished") ?? "",
   });

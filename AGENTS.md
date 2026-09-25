@@ -86,6 +86,8 @@ npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
 npm test           # vitest run (unit)
 npm run test:e2e   # playwright (golden path; starts its own dev server)
+npm run test:live  # domain code vs the REAL Supabase project (.env.local; not in `npm test`)
+npm run dev:real   # dev server with demo mode OFF (real Supabase)
 npm run android:apk  # debug APK (needs CAP_SERVER_URL, JDK 21 — docs/android.md)
 ```
 

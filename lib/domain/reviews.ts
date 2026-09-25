@@ -1,6 +1,8 @@
 import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { reviewsStore } from "@/lib/demo/reviews-store";
+import { createPublicClient } from "@/lib/supabase/public";
+import { isUuid } from "@/lib/domain/mappers/catalogue";
 import { getExperienceById } from "@/lib/domain/catalogue";
 import { listBookings } from "@/lib/domain/bookings";
 import type { ReviewInput } from "@/lib/validation/review";
@@ -16,7 +18,22 @@ export async function listReviews(experienceId: string): Promise<Review[]> {
       .filter((r) => r.experienceId === experienceId)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
-  return []; // TODO: supabase select from reviews
+  if (!isUuid(experienceId)) return [];
+  const { data, error } = await createPublicClient()
+    .from("reviews")
+    .select("id, experience_id, user_id, author_name, rating, comment, created_at")
+    .eq("experience_id", experienceId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`reviews: ${error.message}`);
+  return data.map((r) => ({
+    id: r.id,
+    experienceId: r.experience_id,
+    userId: r.user_id,
+    authorName: r.author_name,
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.created_at,
+  }));
 }
 
 /**

@@ -206,15 +206,39 @@ where (e.slug, c.slug) in (
 )
 on conflict do nothing;
 
--- ---------- images (demo photos; swapped for owned assets later) ----------
-insert into public.images (owner_type, owner_id, url, alt, is_primary) values
-  ('attraction', '22222222-0000-0000-0000-000000000001', 'https://images.unsplash.com/photo-1591017403286-fd8493524e1e?w=1200&q=70', 'Kuching Waterfront at dusk', true),
-  ('attraction', '22222222-0000-0000-0000-000000000006', 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1200&q=70', 'Rainforest canopy in Borneo', true),
-  ('attraction', '22222222-0000-0000-0000-000000000005', 'https://images.unsplash.com/photo-1605552055839-6d5c2f7d0a2a?w=1200&q=70', 'Orangutan in the forest', true),
-  ('experience', '44444444-0000-0000-0000-000000000001', 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=1200&q=70', 'Street food night market', true),
-  ('experience', '44444444-0000-0000-0000-000000000003', 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200&q=70', 'River cruise at sunset', true),
-  ('experience', '44444444-0000-0000-0000-000000000005', 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200&q=70', 'Kayaking on a jungle river', true)
-on conflict do nothing;
+-- ---------- images (bundled demo photos in /public/demo — same as lib/demo/fixtures.ts) ----------
+-- Relative URLs are served by the app itself. Real content uploads to Storage later.
+-- Idempotent: clear the sample photos for these owners, then re-insert.
+delete from public.images
+where owner_id in (
+  select id from public.attractions where is_sample
+  union all
+  select id from public.experiences where is_sample
+);
+
+insert into public.images (owner_type, owner_id, url, alt, is_primary)
+select v.owner_type::public.image_owner, o.id, v.url, v.alt, true
+from (values
+  ('attraction', 'kuching-waterfront',            '/demo/waterfront.jpg',  'Kuching Waterfront at dusk'),
+  ('attraction', 'borneo-cultures-museum',        '/demo/museum.jpg',      'Museum gallery interior'),
+  ('attraction', 'fort-margherita',               '/demo/fort.jpg',        'Historic white fort'),
+  ('attraction', 'tua-pek-kong-temple',           '/demo/temple.jpg',      'Chinese temple'),
+  ('attraction', 'semenggoh-nature-reserve',      '/demo/orangutan.jpg',   'Orangutan in the forest'),
+  ('attraction', 'bako-national-park',            '/demo/proboscis.jpg',   'Proboscis monkey in Bako'),
+  ('attraction', 'sarawak-cultural-village',      '/demo/longhouse.jpg',   'Traditional longhouse'),
+  ('attraction', 'main-bazaar-carpenter-street',  '/demo/chinatown.jpg',   'Heritage shophouse street'),
+  ('experience', 'kuching-heritage-street-food-walk',        '/demo/streetfood.jpg',    'Street food night market'),
+  ('experience', 'sarawak-laksa-kolo-mee-cooking-class',     '/demo/cooking.jpg',       'Hands preparing local food'),
+  ('experience', 'santubong-sunset-wildlife-river-cruise',   '/demo/rivercruise.jpg',   'River cruise at sunset'),
+  ('experience', 'bako-national-park-full-day-trek',         '/demo/jungle-trail.jpg',  'Guided rainforest trail'),
+  ('experience', 'sarawak-kiri-river-kayaking-semadang',     '/demo/kayak.jpg',         'Kayaking on a jungle river'),
+  ('experience', 'annah-rais-longhouse-bidayuh-culture-day', '/demo/rainforest.jpg',    'Jungle waterfall walk near Annah Rais')
+) as v(owner_type, slug, url, alt)
+join (
+  select id, slug, 'attraction' as t from public.attractions
+  union all
+  select id, slug, 'experience' from public.experiences
+) o on o.slug = v.slug and o.t = v.owner_type;
 
 -- ---------- editorial rating baseline + vendor avatars (values from lib/demo/fixtures.ts) ----------
 -- Live reviews (public.reviews) are blended on top of this baseline by the app.

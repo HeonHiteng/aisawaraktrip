@@ -4,14 +4,21 @@
  * so screens don't care which backend is live.
  */
 
-export type CategorySlug =
-  | "nature"
-  | "wildlife"
-  | "culture"
-  | "heritage"
-  | "food"
-  | "adventure"
-  | "shopping";
+export const CATEGORY_SLUGS = [
+  "nature",
+  "wildlife",
+  "culture",
+  "heritage",
+  "food",
+  "adventure",
+  "shopping",
+] as const;
+
+export type CategorySlug = (typeof CATEGORY_SLUGS)[number];
+
+export function isCategorySlug(s: unknown): s is CategorySlug {
+  return typeof s === "string" && (CATEGORY_SLUGS as readonly string[]).includes(s);
+}
 
 export interface Category {
   slug: CategorySlug;

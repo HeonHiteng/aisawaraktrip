@@ -413,6 +413,33 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - Note: `NEXT_PUBLIC_DEMO_MODE=true` is still set in `.env.local`, so the app still runs on
   demo data until Step 2 flips it.
 
+## Going real — Step 2: wire the app to the database (in progress)
+
+- ✅ **2.0 Real generated types** (`types/database.ts`, from the live schema) — the typed
+  client compiles with zero fallout.
+- ✅ **2.1 Catalogue + review reads on Supabase.** `lib/supabase/public.ts` (anon client, no
+  cookies), pure mappers `lib/domain/mappers/catalogue.ts` (unit-tested: junk jsonb,
+  numeric strings, unknown categories, image ordering, uuid guard), real branches in
+  `lib/domain/{catalogue,reviews}`. Errors throw (no silent empty Explore); malformed ids
+  from URLs → "not found", never a Postgres 22P02. Only published rows / published vendors
+  are visible (RLS + `vendors!inner`). Seed now matches the demo (14 bundled photos).
+- ✅ **Verified for real:** `npm run test:live` (6 tests, real domain code vs the live project)
+  and the actual app in real mode — guest login through real Supabase Auth, `?next`
+  preserved, Explore + experience detail rendered from the live DB.
+- 🐛 Fixed: the guest action blamed "Anonymous sign-ins disabled" for *any* failure (it was a
+  network error). It now only says that for `anonymous_provider_disabled`, and logs the real
+  cause.
+- 🖥️ **This PC:** Avast re-signs HTTPS and tells only the Node processes it monitors, so a dev
+  server started by another tool failed with `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. `npm run
+  dev:real` now passes `DEV_EXTRA_CA_CERTS` (in `.env.local`) as `NODE_EXTRA_CA_CERTS` —
+  verification stays ON. Never use `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+- ⏭️ 2.2 trips (trip → itinerary → days → items, versioning) · 2.3 bookings + payments
+  (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
+  2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.
+- Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be
+  started against something unpublished); demo mode still returns any id.
+- Test data: one guest user exists in the live project from the real-mode login test.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

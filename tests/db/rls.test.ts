@@ -75,6 +75,20 @@ describe("schema", () => {
     expect(v.rows[0].n).toBe(5);
   });
 
+  it("gives every attraction and experience one bundled demo photo, and re-seeding doesn't duplicate", async () => {
+    const count = async () =>
+      (
+        await db.query<{ n: number; bad: number }>(
+          `select count(*)::int as n, count(*) filter (where url not like '/demo/%')::int as bad from public.images`,
+        )
+      ).rows[0];
+    expect(await count()).toEqual({ n: 14, bad: 0 });
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    await db.exec(readFileSync(join(__dirname, "..", "..", "supabase", "seed.sql"), "utf8"));
+    expect(await count()).toEqual({ n: 14, bad: 0 });
+  });
+
   it("creates a profile for every new auth user (guests too)", async () => {
     const r = await db.query<{ n: number }>(
       `select count(*)::int as n from public.profiles where id = any($1)`,

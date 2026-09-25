@@ -126,9 +126,14 @@ export async function continueAsGuest(
     options: { data: { full_name: "Guest" } },
   });
   if (error) {
+    // Only claim "disabled" when Supabase says so — a network blip or rate limit
+    // must not send someone off to change a dashboard setting.
+    console.error("[auth] guest sign-in failed:", error.code ?? error.name, error.status, error.message);
     return {
       error:
-        "Guest access isn't available. Enable Anonymous sign-ins in Supabase, or create an account.",
+        error.code === "anonymous_provider_disabled"
+          ? "Guest access isn't available. Enable Anonymous sign-ins in Supabase, or create an account."
+          : "Couldn't start a guest session. Check your connection and try again.",
     };
   }
 

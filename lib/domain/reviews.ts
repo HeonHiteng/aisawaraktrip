@@ -2,6 +2,7 @@ import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { reviewsStore } from "@/lib/demo/reviews-store";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isUuid } from "@/lib/domain/mappers/catalogue";
 import { getExperienceById } from "@/lib/domain/catalogue";
 import { listBookings } from "@/lib/domain/bookings";
@@ -91,16 +92,48 @@ export async function addReview(
   const gate = await canReview(userId, input.experienceId);
   if (!gate.ok) return { error: gate.reason };
 
-  const review: Review = {
-    id: uid(),
-    experienceId: input.experienceId,
-    userId,
-    authorName: authorName.trim() || "A traveller",
-    rating: input.rating,
-    comment: input.comment,
-    createdAt: new Date().toISOString(),
+  const name = authorName.trim() || "A traveller";
+
+  if (DEMO_MODE) {
+    const review: Review = {
+      id: uid(),
+      experienceId: input.experienceId,
+      userId,
+      authorName: name,
+      rating: input.rating,
+      comment: input.comment,
+      createdAt: new Date().toISOString(),
+    };
+    reviewsStore().push(review);
+    return review;
+  }
+
+  // Written with the service role (clients have no write privilege on `reviews`);
+  // identity comes from the session. The database re-checks the booking gate and
+  // uniqueness, so two racing submissions can't both land.
+  const { data, error } = await createAdminClient()
+    .from("reviews")
+    .insert({
+      experience_id: input.experienceId,
+      user_id: userId,
+      author_name: name,
+      rating: input.rating,
+      comment: input.comment,
+    })
+    .select("id, experience_id, user_id, author_name, rating, comment, created_at")
+    .single();
+  if (error) {
+    if (error.code === "23505") return { error: "You've already reviewed this experience." };
+    if (error.code === "P0001") return { error: "You can review this once your booking for it is confirmed." };
+    throw new Error(`add review: ${error.message}`);
+  }
+  return {
+    id: data.id,
+    experienceId: data.experience_id,
+    userId: data.user_id,
+    authorName: data.author_name,
+    rating: data.rating,
+    comment: data.comment,
+    createdAt: data.created_at,
   };
-  if (DEMO_MODE) reviewsStore().push(review);
-  // TODO: insert into supabase reviews (RLS: author only)
-  return review;
 }

@@ -254,6 +254,50 @@ describe("payment settlement (live)", () => {
   });
 });
 
+describe("reviews (live)", () => {
+  it("need a confirmed booking; then one review each, blended into the rating; the database backs the gate", async () => {
+    const { canReview, addReview, listReviews, ratingSummary } = await import("@/lib/domain/reviews");
+
+    // a brand-new traveller, so "no booking yet" really is the starting point
+    const carol = await guest();
+    as(carol);
+    expect(await canReview(carol.id, expId)).toMatchObject({ ok: false });
+
+    const made = await createBooking(carol.id, input({ customerName: "Carol" }));
+    if ("error" in made) throw new Error(made.error);
+    const started = await startPayment(carol.id, made.id, "mock");
+    if ("error" in started) throw new Error(started.error);
+    const q = new URL(started.redirectUrl, "http://x").searchParams;
+    const params = { ref: q.get("ref")!, amount: q.get("amount")!, method: "mock" };
+
+    expect(await canReview(carol.id, expId)).toMatchObject({ ok: false }); // pending doesn't count
+    await settlePayment(carol.id, { ...params, outcome: "approve" });
+    expect(await canReview(carol.id, expId)).toEqual({ ok: true });
+
+    const r = await addReview(carol.id, "Carol T.", { experienceId: expId, rating: 5, comment: "Brilliant evening, great food." });
+    expect(r).toMatchObject({ authorName: "Carol T.", rating: 5, userId: carol.id });
+
+    const list = await listReviews(expId);
+    expect(list.map((x) => x.userId)).toContain(carol.id);
+    // baseline 4.9 x 128 + this 5-star review -> still 4.9, over 129
+    expect(await ratingSummary(expId)).toEqual({ average: 4.9, count: 129 });
+
+    // once only — a friendly message, not an exception
+    expect(await canReview(carol.id, expId)).toMatchObject({ ok: false });
+    expect(await addReview(carol.id, "Carol T.", { experienceId: expId, rating: 1, comment: "Trying to review twice here." })).toMatchObject({ error: expect.stringMatching(/already reviewed/) });
+
+    // someone who never booked
+    const dave = await guest();
+    as(dave);
+    expect(await canReview(dave.id, expId)).toMatchObject({ ok: false });
+    expect(await addReview(dave.id, "Dave", { experienceId: expId, rating: 5, comment: "Never went, reviewing anyway." })).toMatchObject({ error: expect.stringMatching(/once your booking/) });
+
+    // even code that skipped the TypeScript gate can't: the database refuses (service role included)
+    const { error } = await admin.from("reviews").insert({ experience_id: expId, user_id: dave.id, author_name: "Dave", rating: 5, comment: "Straight to the database." });
+    expect(error?.message).toMatch(/requires a confirmed or completed booking/);
+  });
+});
+
 describe("cancelling (live)", () => {
   it("a traveller cancels their own booking with a reason; nothing but cancelling is allowed", async () => {
     as(alice);

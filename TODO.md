@@ -464,7 +464,13 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   paid-after-cancel are logged, not processed (needs the provider's refund API), and
   `/api/payments/webhook` still only ACKs (Step 5: signature verification, then
   `settlePayment(null, …)`).
-- ⏭️ 2.4 reviews write + gate (next) · 2.5 admin via service role
+- ✅ **2.4 Reviews write + gate.** `addReview` inserts with the service role (clients have no
+  write privilege on `reviews`); migration `…100004` adds a BEFORE INSERT trigger so the booking
+  gate ("confirmed or completed booking for THIS experience") is enforced by the database too —
+  even the service role can't skip it; unique-per-traveller races land as a friendly message.
+  +3 SQL tests (gate matrix), +1 live test (pending doesn't count → confirmed does → one review →
+  blended 4.9 over 129 → duplicate refused → non-booker refused → raw service-role insert refused).
+- ⏭️ 2.5 admin via service role (next) · then flip `NEXT_PUBLIC_DEMO_MODE=false`
   (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
   2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.
 - Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be

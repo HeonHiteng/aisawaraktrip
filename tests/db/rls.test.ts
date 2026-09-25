@@ -299,10 +299,17 @@ describe("reviews", () => {
          values ($1, $2, 'Bob', 5, 'Never even booked this one.')`,
         [experienceId, bob],
       ),
-    ).rejects.toThrow(DENIED);
+    ).rejects.toThrow(/permission denied/i);
   });
 
   it("enforce one review per traveller and a 1–5 rating", async () => {
+    await db.query(
+      `insert into public.bookings
+         (user_id, experience_id, booking_date, num_adults, unit_price, subtotal, service_fee, total_amount,
+          status, customer_name, customer_email, experience_title, experience_slug, vendor_name)
+       values ($1, $2, '2026-12-02', 1, 100, 100, 6, 106, 'confirmed', 'Bob', 'bob@example.test', 't', 's', 'v')`,
+      [bob, experienceId],
+    );
     await expect(
       db.query(
         `insert into public.reviews (experience_id, user_id, author_name, rating, comment)
@@ -317,5 +324,47 @@ describe("reviews", () => {
         [experienceId, bob],
       ),
     ).rejects.toThrow(/check|violates/i);
+  });
+
+  describe("the booking gate (enforced by the database, even for the service role)", () => {
+    const review = (user: string, exp = experienceId) =>
+      as(
+        db,
+        { role: "service" },
+        `insert into public.reviews (experience_id, user_id, author_name, rating, comment)
+         values ($2, $1, 'X', 5, 'A perfectly fine review text.')`,
+        [user, exp],
+      );
+    const bookingFor = async (user: string, status: string) => {
+      await db.query(
+        `insert into public.bookings
+           (user_id, experience_id, booking_date, num_adults, unit_price, subtotal, service_fee, total_amount,
+            status, customer_name, customer_email, experience_title, experience_slug, vendor_name)
+         values ($1, $2, '2026-12-02', 1, 100, 100, 6, 106, $3, 'X', 'x@example.test', 't', 's', 'v')`,
+        [user, experienceId, status],
+      );
+    };
+
+    it("refuses a review from someone with no booking at all", async () => {
+      const nobody = await createUser(db, "Nobody");
+      await expect(review(nobody)).rejects.toThrow(/requires a confirmed or completed booking/);
+    });
+
+    it("refuses pending and cancelled bookings; accepts confirmed and completed", async () => {
+      const cases: [string, boolean][] = [["pending", false], ["cancelled", false], ["refunded", false], ["confirmed", true], ["completed", true]];
+      for (const [status, ok] of cases) {
+        const u = await createUser(db, `Gate-${status}`);
+        await bookingFor(u, status);
+        if (ok) await expect(review(u)).resolves.toBeDefined();
+        else await expect(review(u)).rejects.toThrow(/requires a confirmed or completed booking/);
+      }
+    });
+
+    it("is about THIS experience — a booking for another one doesn't count", async () => {
+      const u = await createUser(db, "Gate-other");
+      await bookingFor(u, "confirmed");
+      const other = (await db.query<{ id: string }>(`select id from public.experiences where id <> $1 limit 1`, [experienceId])).rows[0].id;
+      await expect(review(u, other)).rejects.toThrow(/requires a confirmed or completed booking/);
+    });
   });
 });

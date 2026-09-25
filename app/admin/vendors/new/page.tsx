@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { VendorForm } from "@/components/admin/vendor-form";
+import { listLocations } from "@/lib/domain/catalogue";
 import { saveVendor } from "@/app/admin/vendors/actions";
 
 export const metadata: Metadata = { title: "New vendor" };
 
-export default function NewVendorPage() {
+export default async function NewVendorPage() {
+  const locations = await listLocations();
   return (
     <div className="max-w-2xl space-y-5">
       <Link
@@ -17,7 +19,7 @@ export default function NewVendorPage() {
         Vendors
       </Link>
       <h1 className="text-2xl font-bold tracking-tight">New vendor</h1>
-      <VendorForm action={saveVendor} />
+      <VendorForm action={saveVendor} locations={locations} />
     </div>
   );
 }

@@ -3,17 +3,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { VendorForm } from "@/components/admin/vendor-form";
+import { AdminNotice } from "@/components/admin/admin-notice";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { adminGetVendor } from "@/lib/domain/admin";
+import { listLocations } from "@/lib/domain/catalogue";
 import { deleteVendor, saveVendor } from "@/app/admin/vendors/actions";
 
 export const metadata: Metadata = { title: "Edit vendor" };
 
 export default async function EditVendorPage({
   params,
+  searchParams,
 }: PageProps<"/admin/vendors/[id]/edit">) {
   const { id } = await params;
-  const vendor = await adminGetVendor(id);
+  const sp = await searchParams;
+  const [vendor, locations] = await Promise.all([
+    adminGetVendor(id),
+    listLocations(),
+  ]);
   if (!vendor) notFound();
 
   return (
@@ -26,7 +33,8 @@ export default async function EditVendorPage({
         Vendors
       </Link>
       <h1 className="text-2xl font-bold tracking-tight">{vendor.name}</h1>
-      <VendorForm action={saveVendor} vendor={vendor} />
+      <AdminNotice message={sp.error} />
+      <VendorForm action={saveVendor} vendor={vendor} locations={locations} />
 
       <div className="border-t border-border pt-5">
         <ConfirmSubmit

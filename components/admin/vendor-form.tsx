@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Field, selectClass } from "@/components/admin/field";
-import type { Vendor } from "@/types/catalogue";
+import type { LocationRef, Vendor } from "@/types/catalogue";
 import type { AdminFormState } from "@/app/admin/vendors/actions";
 
 const STATUSES = ["unverified", "pending", "verified", "rejected"];
@@ -13,9 +13,11 @@ const STATUSES = ["unverified", "pending", "verified", "rejected"];
 export function VendorForm({
   action,
   vendor,
+  locations,
 }: {
   action: (prev: AdminFormState, fd: FormData) => Promise<AdminFormState>;
   vendor?: Vendor;
+  locations: LocationRef[];
 }) {
   const [state, formAction, pending] = useActionState<AdminFormState, FormData>(
     action,
@@ -40,11 +42,19 @@ export function VendorForm({
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Location" htmlFor="locationName">
-            <Input
+            <select
               id="locationName"
               name="locationName"
               defaultValue={v?.locationName ?? ""}
-            />
+              className={selectClass()}
+            >
+              <option value="">No location</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.name}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Verification" htmlFor="verificationStatus">
             <select

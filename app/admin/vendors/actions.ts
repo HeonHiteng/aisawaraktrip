@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
+  AdminError,
   adminDeleteVendor,
   adminSaveVendor,
   adminSetVendorVerification,
@@ -33,7 +34,12 @@ export async function saveVendor(
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
 
-  await adminSaveVendor(parsed.data);
+  try {
+    await adminSaveVendor(parsed.data);
+  } catch (e) {
+    if (e instanceof AdminError) return { error: e.message };
+    throw e;
+  }
   revalidatePath("/admin/vendors");
   revalidatePath("/explore");
   redirect("/admin/vendors");
@@ -41,7 +47,15 @@ export async function saveVendor(
 
 export async function deleteVendor(formData: FormData): Promise<void> {
   await requireAdmin();
-  await adminDeleteVendor(String(formData.get("id") ?? ""));
+  const id = String(formData.get("id") ?? "");
+  try {
+    await adminDeleteVendor(id);
+  } catch (e) {
+    if (e instanceof AdminError) {
+      redirect(`/admin/vendors/${encodeURIComponent(id)}/edit?error=${encodeURIComponent(e.message)}`);
+    }
+    throw e;
+  }
   revalidatePath("/admin/vendors");
   revalidatePath("/explore");
   redirect("/admin/vendors");

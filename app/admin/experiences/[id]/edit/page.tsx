@@ -3,20 +3,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { ExperienceForm } from "@/components/admin/experience-form";
+import { AdminNotice } from "@/components/admin/admin-notice";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { adminGetExperience, adminListVendors } from "@/lib/domain/admin";
-import { demoLocations } from "@/lib/demo/fixtures";
+import { listLocations } from "@/lib/domain/catalogue";
 import { deleteExperience, saveExperience } from "@/app/admin/experiences/actions";
 
 export const metadata: Metadata = { title: "Edit experience" };
 
 export default async function EditExperiencePage({
   params,
+  searchParams,
 }: PageProps<"/admin/experiences/[id]/edit">) {
   const { id } = await params;
-  const [experience, vendors] = await Promise.all([
+  const sp = await searchParams;
+  const [experience, vendors, locations] = await Promise.all([
     adminGetExperience(id),
     adminListVendors(),
+    listLocations(),
   ]);
   if (!experience) notFound();
 
@@ -30,10 +34,11 @@ export default async function EditExperiencePage({
         Experiences
       </Link>
       <h1 className="text-2xl font-bold tracking-tight">{experience.title}</h1>
+      <AdminNotice message={sp.error} />
       <ExperienceForm
         action={saveExperience}
         vendors={vendors}
-        locations={demoLocations}
+        locations={locations}
         experience={experience}
       />
 

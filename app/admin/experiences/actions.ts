@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
+  AdminError,
   adminDeleteExperience,
   adminSaveExperience,
   adminSetExperiencePublished,
@@ -45,7 +46,12 @@ export async function saveExperience(
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
 
-  await adminSaveExperience(parsed.data);
+  try {
+    await adminSaveExperience(parsed.data);
+  } catch (e) {
+    if (e instanceof AdminError) return { error: e.message };
+    throw e;
+  }
   revalidatePath("/admin/experiences");
   revalidatePath("/explore");
   redirect("/admin/experiences");
@@ -53,7 +59,16 @@ export async function saveExperience(
 
 export async function deleteExperience(formData: FormData): Promise<void> {
   await requireAdmin();
-  await adminDeleteExperience(String(formData.get("id") ?? ""));
+  const id = String(formData.get("id") ?? "");
+  try {
+    await adminDeleteExperience(id);
+  } catch (e) {
+    // e.g. "it has bookings" — back to the edit page with the reason (redirect must be outside try)
+    if (e instanceof AdminError) {
+      redirect(`/admin/experiences/${encodeURIComponent(id)}/edit?error=${encodeURIComponent(e.message)}`);
+    }
+    throw e;
+  }
   revalidatePath("/admin/experiences");
   revalidatePath("/explore");
   redirect("/admin/experiences");

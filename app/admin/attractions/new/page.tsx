@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { AttractionForm } from "@/components/admin/attraction-form";
-import { demoLocations } from "@/lib/demo/fixtures";
+import { listLocations } from "@/lib/domain/catalogue";
 import { saveAttraction } from "@/app/admin/attractions/actions";
 
 export const metadata: Metadata = { title: "New attraction" };
 
-export default function NewAttractionPage() {
+export default async function NewAttractionPage() {
+  const locations = await listLocations();
   return (
     <div className="max-w-2xl space-y-5">
       <Link
@@ -18,7 +19,7 @@ export default function NewAttractionPage() {
         Attractions
       </Link>
       <h1 className="text-2xl font-bold tracking-tight">New attraction</h1>
-      <AttractionForm action={saveAttraction} locations={demoLocations} />
+      <AttractionForm action={saveAttraction} locations={locations} />
     </div>
   );
 }

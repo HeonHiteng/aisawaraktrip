@@ -3,18 +3,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { AttractionForm } from "@/components/admin/attraction-form";
+import { AdminNotice } from "@/components/admin/admin-notice";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { adminGetAttraction } from "@/lib/domain/admin";
-import { demoLocations } from "@/lib/demo/fixtures";
+import { listLocations } from "@/lib/domain/catalogue";
 import { deleteAttraction, saveAttraction } from "@/app/admin/attractions/actions";
 
 export const metadata: Metadata = { title: "Edit attraction" };
 
 export default async function EditAttractionPage({
   params,
+  searchParams,
 }: PageProps<"/admin/attractions/[id]/edit">) {
   const { id } = await params;
-  const attraction = await adminGetAttraction(id);
+  const sp = await searchParams;
+  const [attraction, locations] = await Promise.all([
+    adminGetAttraction(id),
+    listLocations(),
+  ]);
   if (!attraction) notFound();
 
   return (
@@ -27,9 +33,10 @@ export default async function EditAttractionPage({
         Attractions
       </Link>
       <h1 className="text-2xl font-bold tracking-tight">{attraction.name}</h1>
+      <AdminNotice message={sp.error} />
       <AttractionForm
         action={saveAttraction}
-        locations={demoLocations}
+        locations={locations}
         attraction={attraction}
       />
 

@@ -3,13 +3,16 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ExperienceForm } from "@/components/admin/experience-form";
 import { adminListVendors } from "@/lib/domain/admin";
-import { demoLocations } from "@/lib/demo/fixtures";
+import { listLocations } from "@/lib/domain/catalogue";
 import { saveExperience } from "@/app/admin/experiences/actions";
 
 export const metadata: Metadata = { title: "New experience" };
 
 export default async function NewExperiencePage() {
-  const vendors = await adminListVendors();
+  const [vendors, locations] = await Promise.all([
+    adminListVendors(),
+    listLocations(),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -24,7 +27,7 @@ export default async function NewExperiencePage() {
       <ExperienceForm
         action={saveExperience}
         vendors={vendors}
-        locations={demoLocations}
+        locations={locations}
       />
     </div>
   );

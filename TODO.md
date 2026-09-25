@@ -470,7 +470,32 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   even the service role can't skip it; unique-per-traveller races land as a friendly message.
   +3 SQL tests (gate matrix), +1 live test (pending doesn't count → confirmed does → one review →
   blended 4.9 over 129 → duplicate refused → non-booker refused → raw service-role insert refused).
-- ⏭️ 2.5 admin via service role (next) · then flip `NEXT_PUBLIC_DEMO_MODE=false`
+- ✅ **2.5 Admin on Supabase — under the admin's OWN session, not the service role.** RLS
+  `is_admin()` is the authority, so a forgotten `requireAdmin()` can't escalate and every change
+  is attributed to the real admin. Migrations `…100005/6`: `admin_save_experience/attraction/vendor`
+  (one transaction each: row + category links + ordered photos; slugs kept unique, never changed on
+  edit; rating/sample flag/opening hours preserved; unknown vendor/location refused, never
+  invented), `admin_set_vendor_verification` (stamps who/when), and admins may change a booking's
+  **status only** (column-level grant — never the money; history records the admin). Deleting
+  something that has bookings fails with "unpublish it instead" (`AdminError` → message on the edit
+  page). The service role is used for one thing: user emails (auth system). Analytics maths is now
+  one pure function shared by demo + real; big lists are paged (fail loudly past 20k rows).
+  Forms load real locations (were demo fixtures); vendor location is a dropdown.
+  `tests/unit/admin-guard.test.ts` statically enforces `requireAdmin()` as the first line of every
+  admin action + the layout.
+- 🐛 **Found by the live tests and fixed:** (1) photos (`images`, polymorphic owner) were left behind
+  when an experience/attraction/vendor was deleted — now removed by triggers + existing orphans
+  swept (`…100006`); (2) Supabase returns `""` (not null) for an anonymous user's email — normalised
+  in `lib/auth.ts` and the admin user list.
+- **Verified:** 22 more SQL tests (admin functions, permissions, photo cleanup), admin mapper +
+  guard unit tests, 10 live tests as a real admin (create → public catalogue → edit → hide → delete,
+  sold-item protection, status changes named in history, dashboard adds up, user list).
+- Advisor (expected, by design): `is_admin()` callable (RLS uses it); "anonymous access policies"
+  (guests are anonymous users; every policy is owner-scoped); **leaked-password protection is off**
+  — a dashboard setting (Auth → password security; Pro plan) to enable before launch.
+- ⏭️ Step 2 is functionally complete. Left: a browser pass of the real-mode admin screens, then
+  Step 3 (deploy). `.env.local` keeps `NEXT_PUBLIC_DEMO_MODE=true` (E2E + UI work run on demo);
+  `npm run dev:real` runs the real backend, and a Vercel deploy with Supabase env vars is real by default.
   (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
   2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.
 - Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
+  AdminError,
   adminDeleteAttraction,
   adminSaveAttraction,
   adminSetAttractionPublished,
@@ -37,7 +38,12 @@ export async function saveAttraction(
     return { error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
 
-  await adminSaveAttraction(parsed.data);
+  try {
+    await adminSaveAttraction(parsed.data);
+  } catch (e) {
+    if (e instanceof AdminError) return { error: e.message };
+    throw e;
+  }
   revalidatePath("/admin/attractions");
   revalidatePath("/explore");
   redirect("/admin/attractions");
@@ -45,7 +51,15 @@ export async function saveAttraction(
 
 export async function deleteAttraction(formData: FormData): Promise<void> {
   await requireAdmin();
-  await adminDeleteAttraction(String(formData.get("id") ?? ""));
+  const id = String(formData.get("id") ?? "");
+  try {
+    await adminDeleteAttraction(id);
+  } catch (e) {
+    if (e instanceof AdminError) {
+      redirect(`/admin/attractions/${encodeURIComponent(id)}/edit?error=${encodeURIComponent(e.message)}`);
+    }
+    throw e;
+  }
   revalidatePath("/admin/attractions");
   revalidatePath("/explore");
   redirect("/admin/attractions");

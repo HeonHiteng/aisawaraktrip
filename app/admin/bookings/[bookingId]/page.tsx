@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
+import { AdminNotice } from "@/components/admin/admin-notice";
 import { adminGetBooking } from "@/lib/domain/admin";
 import { formatDate, formatMYR } from "@/lib/format";
 import { BOOKING_STATUS_META, type BookingStatus } from "@/types/booking";
@@ -21,8 +22,10 @@ const NEXT_STATUS: Record<BookingStatus, BookingStatus[]> = {
 
 export default async function AdminBookingDetail({
   params,
+  searchParams,
 }: PageProps<"/admin/bookings/[bookingId]">) {
   const { bookingId } = await params;
+  const sp = await searchParams;
   const b = await adminGetBooking(bookingId);
   if (!b) notFound();
 
@@ -38,6 +41,7 @@ export default async function AdminBookingDetail({
         <ArrowLeft className="size-4" />
         Bookings
       </Link>
+      <AdminNotice message={sp.error} />
 
       <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <div className="flex items-start justify-between gap-2">

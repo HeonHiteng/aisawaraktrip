@@ -3,6 +3,9 @@ import { cache } from "react";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { catalogueStore } from "@/lib/demo/catalogue-store";
 import { createPublicClient } from "@/lib/supabase/public";
+import { demoLocations } from "@/lib/demo/fixtures";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import {
   attractionFromRow,
   experienceFromRow,
@@ -16,6 +19,7 @@ import type {
   CategorySlug,
   Experience,
   ImageRef,
+  LocationRef,
 } from "@/types/catalogue";
 
 /**
@@ -85,17 +89,19 @@ function sortAttractions(list: Attraction[], sort?: SortOption): Attraction[] {
 // in-memory `matches` / `sort*` as demo mode — one behaviour, two backends. Move
 // filtering into SQL if it ever outgrows PostgREST's 1000-row page.
 
-const EXPERIENCE_SELECT =
+export const EXPERIENCE_SELECT =
   "*, vendor:vendors!inner(id, name, slug, verification_status, avatar_url), location:locations(id, name, area), experience_categories(categories(slug))";
-const ATTRACTION_SELECT =
+export const ATTRACTION_SELECT =
   "*, location:locations(id, name, area), attraction_categories(categories(slug))";
 
-async function imagesFor(
+/** Photos for a set of owners. Pass the admin's own client to see unpublished owners' photos. */
+export async function loadImages(
+  db: SupabaseClient<Database>,
   owner: "experience" | "attraction",
   ids: string[],
 ): Promise<Map<string, ImageRef[]>> {
   if (ids.length === 0) return new Map();
-  const { data, error } = await createPublicClient()
+  const { data, error } = await db
     .from("images")
     .select("owner_id, url, alt, is_primary, sort_order")
     .eq("owner_type", owner)
@@ -104,13 +110,19 @@ async function imagesFor(
   return groupImages(data);
 }
 
-async function hydrateExperiences(rows: ExperienceRow[]): Promise<Experience[]> {
-  const images = await imagesFor("experience", rows.map((r) => r.id));
+export async function hydrateExperiences(
+  rows: ExperienceRow[],
+  db: SupabaseClient<Database> = createPublicClient(),
+): Promise<Experience[]> {
+  const images = await loadImages(db, "experience", rows.map((r) => r.id));
   return rows.map((r) => experienceFromRow(r, images.get(r.id)));
 }
 
-async function hydrateAttractions(rows: AttractionRow[]): Promise<Attraction[]> {
-  const images = await imagesFor("attraction", rows.map((r) => r.id));
+export async function hydrateAttractions(
+  rows: AttractionRow[],
+  db: SupabaseClient<Database> = createPublicClient(),
+): Promise<Attraction[]> {
+  const images = await loadImages(db, "attraction", rows.map((r) => r.id));
   return rows.map((r) => attractionFromRow(r, images.get(r.id)));
 }
 
@@ -226,4 +238,15 @@ export async function getAttraction(slug: string): Promise<Attraction | null> {
     );
   }
   return dbAttractionBySlug(slug);
+}
+
+/** Places an experience / attraction / vendor can be located at (public reference data). */
+export async function listLocations(): Promise<LocationRef[]> {
+  if (DEMO_MODE) return demoLocations;
+  const { data, error } = await createPublicClient()
+    .from("locations")
+    .select("id, name, area")
+    .order("name");
+  if (error) throw new Error(`locations: ${error.message}`);
+  return data;
 }

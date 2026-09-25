@@ -996,6 +996,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_save_attraction: { Args: { p: Json }; Returns: string }
+      admin_save_experience: { Args: { p: Json }; Returns: string }
+      admin_save_vendor: { Args: { p: Json }; Returns: string }
+      admin_set_vendor_verification: {
+        Args: {
+          p_id: string
+          p_status: Database["public"]["Enums"]["verification_status"]
+        }
+        Returns: undefined
+      }
       create_trip: { Args: { p_itinerary: Json; p_trip: Json }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       save_itinerary: {

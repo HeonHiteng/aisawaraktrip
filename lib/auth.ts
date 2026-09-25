@@ -39,7 +39,7 @@ export async function getUser(): Promise<AppUser | null> {
   return user
     ? {
         id: user.id,
-        email: user.email ?? null,
+        email: user.email || null, // anonymous users come back as "" not null
         isAnonymous: user.is_anonymous ?? false,
       }
     : null;

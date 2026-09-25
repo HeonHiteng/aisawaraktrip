@@ -109,7 +109,7 @@ export function ExperienceForm({
             name="pricePerPerson"
             type="number"
             min={0}
-            step={10}
+            step="0.01" // sen precision — RM 45 and RM 12.50 are both valid prices
             defaultValue={e?.pricePerPerson ?? 0}
           />
         </Field>

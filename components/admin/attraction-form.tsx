@@ -90,6 +90,7 @@ export function AttractionForm({
             name="priceMin"
             type="number"
             min={0}
+            step="0.01"
             defaultValue={a?.priceMin ?? 0}
           />
         </Field>
@@ -99,6 +100,7 @@ export function AttractionForm({
             name="priceMax"
             type="number"
             min={0}
+            step="0.01"
             defaultValue={a?.priceMax ?? 0}
           />
         </Field>

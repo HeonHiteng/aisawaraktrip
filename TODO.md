@@ -493,8 +493,13 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - Advisor (expected, by design): `is_admin()` callable (RLS uses it); "anonymous access policies"
   (guests are anonymous users; every policy is owner-scoped); **leaked-password protection is off**
   — a dashboard setting (Auth → password security; Pro plan) to enable before launch.
-- ⏭️ Step 2 is functionally complete. Left: a browser pass of the real-mode admin screens, then
-  Step 3 (deploy). `.env.local` keeps `NEXT_PUBLIC_DEMO_MODE=true` (E2E + UI work run on demo);
+- ✅ **Browser pass of the real-mode admin** (real Supabase Auth session promoted to admin, then
+  removed): dashboard renders from the live DB; experiences list; new-experience form offers the
+  real vendors + locations; **created an experience through the actual form** (row, photo, category,
+  `created_by` = the admin all correct) and **deleted it through the real confirm flow** (row, photo
+  and links all gone). 🐛 Found there: the admin price fields only accepted multiples of RM 10
+  (experience) / whole ringgit (attraction) — now sen precision (`step="0.01"`).
+- ⏭️ Step 2 is functionally complete. Next: Step 3 (deploy). `.env.local` keeps `NEXT_PUBLIC_DEMO_MODE=true` (E2E + UI work run on demo);
   `npm run dev:real` runs the real backend, and a Vercel deploy with Supabase env vars is real by default.
   (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
   2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.

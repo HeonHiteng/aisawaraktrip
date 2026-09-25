@@ -361,6 +361,19 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   date-range filter on the dashboard; per-review moderation; real Supabase
   service-role wiring for all `lib/domain/admin` writes.
 
+## Android APK (Capacitor shell)
+
+- ✅ `capacitor.config.ts` + `android/` project; `npm run android:apk` builds a debug
+  APK (`com.sarawaktrip.app`, min Android 7, INTERNET only, 4 MB).
+- ✅ Loads the app from `CAP_SERVER_URL` (LAN dev server today, https once deployed);
+  `capacitor-www/offline.html` for unreachable server / WebView < Chrome 111.
+- ✅ Verified on an Android 11 emulator: installs, launches, reaches the LAN server,
+  old-WebView fallback renders. **Not yet verified:** the real UI in a modern
+  WebView on a device (emulator image is stuck on Chrome 83).
+- ⏭️ Deploy to https and rebuild against it; release keystore + `.aab` for Play;
+  launcher icon + splash; native niceties (status-bar colour, back button).
+- Decision change: V1 is no longer "web-only PWA" — the PWA stays, plus this APK.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.
@@ -371,6 +384,6 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 
 ## Decisions locked
 
-- Web-only PWA for V1 (no native apps).
+- PWA + Capacitor Android APK for V1 (thin shell over the web app; no native rewrite).
 - LLM = Anthropic Claude. Maps = Mapbox. No ORM. Package manager = npm.
 - V1 geography = Kuching / Sarawak only.

@@ -14,12 +14,16 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "android:sync": "cap sync android",
+    "android:apk": "node scripts/android-apk.mjs",
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "gen:types": "supabase gen types typescript --linked --schema public > types/database.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "class-variance-authority": "^0.7.1",
@@ -37,6 +41,7 @@
     "zod": "^4.5.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

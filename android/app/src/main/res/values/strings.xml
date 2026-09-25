@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sarawak Trip Planner</string>
+    <string name="title_activity_main">Sarawak Trip Planner</string>
+    <string name="package_name">com.sarawaktrip.app</string>
+    <string name="custom_url_scheme">com.sarawaktrip.app</string>
+</resources>

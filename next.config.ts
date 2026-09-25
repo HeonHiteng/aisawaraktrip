@@ -20,7 +20,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self'${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${isDev ? " ws://localhost:*" : ""}`,
+  `connect-src 'self'${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${isDev ? " ws://localhost:* ws://*:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -45,6 +45,11 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Dev only: let a phone / the Android app reach the dev server over the LAN.
+  // e.g. ALLOWED_DEV_ORIGINS=192.168.1.20 in .env.local
+  allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

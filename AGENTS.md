@@ -30,6 +30,8 @@ the catalogue and bookings.
   booking flips to `confirmed`; real mode does it in `/api/payments/webhook` after
   signature verification. Amounts are snapshotted server-side, never from the client.
 - Hosting: **Vercel**
+- **Android APK**: Capacitor shell (`capacitor.config.ts`, `android/`) that loads the
+  hosted/LAN app in a WebView — see `docs/android.md`. Not a native rewrite.
 
 ## Next.js 16 gotchas (already bit us / will)
 
@@ -84,6 +86,7 @@ npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
 npm test           # vitest run (unit)
 npm run test:e2e   # playwright (golden path; starts its own dev server)
+npm run android:apk  # debug APK (needs CAP_SERVER_URL, JDK 21 — docs/android.md)
 ```
 
 ## Security

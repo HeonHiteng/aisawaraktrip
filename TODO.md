@@ -7,15 +7,15 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Project setup & architecture | ✅ |
-| 2 | Database & authentication | 🔨 (code done — needs Supabase project to verify) |
-| 3 | Explore (attractions / vendors / experiences) | 🔨 (demo done; Supabase wiring pending) |
+| 2 | Database & authentication | ✅ live on Supabase (guest login verified; register/email-confirm needs the dashboard URL config) |
+| 3 | Explore (attractions / vendors / experiences) | ✅ live on Supabase (Mapbox pins still pending a token) |
 | 4 | AI Trip Planner | 🔨 (demo done; real Claude call pending API key) |
-| 5 | Itinerary management | 🔨 (demo done; Supabase persistence pending) |
-| 6 | Booking system | 🔨 (demo done; Supabase pending) |
+| 5 | Itinerary management | ✅ live on Supabase |
+| 6 | Booking system | ✅ live on Supabase (slot capacity not enforced yet) |
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
-| 8 | Admin dashboard | 🔨 (demo done; Supabase service-role wiring pending) |
+| 8 | Admin dashboard | ✅ live on Supabase (admin's own session + RLS) |
 | 9 | Testing & security | 🔨 (tests + headers + rate limiting done; Sentry optional) |
-| 10 | Deployment | 🔨 (deploy-ready; founder does the Vercel import) |
+| 10 | Deployment | ✅ staging live: https://sarawak-trip-planner.vercel.app (auto-deploys from `main`) |
 
 ## Phase 1 — setup
 
@@ -506,6 +506,27 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be
   started against something unpublished); demo mode still returns any id.
 - Test data: one guest user exists in the live project from the real-mode login test.
+
+## Going real — Step 3: deploy ✅ (staging)
+
+- ✅ **Live at https://sarawak-trip-planner.vercel.app** (Vercel project `sarawak-trip-planner`, team
+  `heonhitengs-projects`, connected to GitHub → every push to `main` auto-deploys). Set up with the
+  Vercel CLI: `vercel link` created the project + Git connection; `scripts/vercel-env.mjs` pushed the
+  production env vars from `.env.local` without printing values (service-role key stored as
+  *sensitive*; dev-only vars deliberately not sent).
+- ✅ Pre-flight: production build in real mode (40 routes) passes.
+- ✅ **Verified on the live URL:** health 200; signed-out `/explore` & `/admin` → `/login?next=`;
+  CSP allows the Supabase host + `upgrade-insecure-requests`; HSTS + X-Frame-Options; real guest
+  login → Explore lists the 6 experiences from the DB; **full money path in production** — booking
+  RM 300 + 6% fee = RM 318 (server-side) → mock gateway → confirmed; DB shows booking `confirmed`,
+  payment `paid` (RM 318), one `pending→confirmed` history row. Test data deleted afterwards.
+- ⚠️ **Staging only:** payments are the fake gateway (`ALLOW_MOCK_PAYMENTS=true` is what lets it run in
+  production; remove it once a real provider is wired).
+- ⏳ **Founder, Supabase dashboard:** Auth → URL Configuration → Site URL
+  `https://sarawak-trip-planner.vercel.app` + redirect `…/**` (needed for the Register
+  email-confirmation link; guest login works without it); enable leaked-password protection.
+- ⏭️ Rebuild the Android APK against the https URL (`CAP_SERVER_URL=https://sarawak-trip-planner.vercel.app`);
+  create the first real admin (register → promote); Step 4 (Claude planner, Resend, Upstash, Mapbox).
 
 ## Blocked / needs the founder
 

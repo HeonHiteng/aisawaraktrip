@@ -374,7 +374,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   launcher icon + splash; native niceties (status-bar colour, back button).
 - Decision change: V1 is no longer "web-only PWA" — the PWA stays, plus this APK.
 
-## Going real — Step 1: database foundation ✅ (pending one dashboard toggle)
+## Going real — Step 1: database foundation ✅ DONE
 
 - ✅ **Live on Supabase project "Ai Sarawak"** (`tuwbkgworagassllvsqy`, ap-northeast-1): all 9
   migrations applied (remote history renamed to match the local filenames so
@@ -399,12 +399,11 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ **Verified against the live API with the public key:** anon reads catalogue (7 / 6 rows),
   sees no bookings/reviews; anon INSERT booking → `42501`; anon PATCH price → `42501`;
   trigger function → 404.
-- ⏳ **Needs the founder:** Dashboard → Authentication → Sign In / Providers → enable
-  **Anonymous sign-ins** (currently `anonymous_provider_disabled`). Then re-run the
-  signed-in attack test (own-profile read, RM0 booking insert, self-promote to admin,
-  review without booking must all be refused; own trip insert must succeed).
-- ⏳ **Needs the founder:** add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (the MCP
-  connector deliberately doesn't expose it; Step 2's server-side booking/payment writes need it).
+- ✅ **Anonymous sign-ins enabled; service-role key in `.env.local`** (verified: secret key
+  passes an admin-only call, public key is refused). **Signed-in guest attack test on the
+  live project:** RM0 `confirmed` booking insert → refused (`42501`); self-promote to admin →
+  refused ("not allowed to change role"); review without a booking → refused; own profile
+  read + own trip insert → work. Test user deleted afterwards.
 - ⏭️ `types/database.ts` regenerated from the live schema at the start of Step 2 (it will be
   wired into the typed client there, where any typecheck fallout gets handled).
 - ⏭️ Seed ↔ fixtures parity (Step 2): the demo has a 6th (pending) vendor, 15 bundled photos

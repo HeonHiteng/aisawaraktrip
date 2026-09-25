@@ -105,3 +105,25 @@ test("login carries ?next through to the destination", async ({ page }) => {
   await page.getByRole("button", { name: "Continue as guest" }).click();
   await expect(page).toHaveURL(/\/bookings$/, { timeout: 15_000 });
 });
+
+test("the root is the app's entry: signed out -> sign in, signed in -> home (no landing page)", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("button", { name: "Continue as guest" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Continue as guest" }).click();
+  await page.waitForURL(/\/home$/, { timeout: 15_000 });
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/home$/);
+});
+
+test("the legal pages stay reachable from the sign-in screen", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("navigation", { name: "Legal" }).getByRole("link", { name: "Privacy" }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("link", { name: "Open app" })).toBeVisible();
+});
+

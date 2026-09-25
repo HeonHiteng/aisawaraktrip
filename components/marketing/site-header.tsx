@@ -3,6 +3,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { site } from "@/lib/site";
 
+/** Header for the legal pages only — the app has no marketing site. */
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur">
@@ -13,26 +14,12 @@ export function SiteHeader() {
           </span>
           <span className="tracking-tight">{site.shortName}</span>
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
-          <Link
-            href="/explore"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            Explore
-          </Link>
-          <Link
-            href="/login"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "hidden sm:inline-flex",
-            )}
-          >
-            Sign in
-          </Link>
-          <Link href="/plan" className={cn(buttonVariants({ size: "sm" }))}>
-            Plan a trip
-          </Link>
-        </nav>
+        <Link
+          href="/"
+          className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+        >
+          Open app
+        </Link>
       </div>
     </header>
   );

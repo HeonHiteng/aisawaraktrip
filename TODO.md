@@ -528,6 +528,15 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ⏭️ Rebuild the Android APK against the https URL (`CAP_SERVER_URL=https://sarawak-trip-planner.vercel.app`);
   create the first real admin (register → promote); Step 4 (Claude planner, Resend, Upstash, Mapbox).
 
+## App entry: no landing page
+
+- ✅ **"/" is an app entry, not a website.** No marketing page: signed out → `/login` (which offers
+  "Continue as guest"), signed in → `/home` (`app/(marketing)/page.tsx` is just the redirect).
+  Landing page + `HeroPreview` deleted; sitemap no longer lists "/"; the legal pages (`/privacy`,
+  `/terms` — needed for PDPA and the Play Store) stay, with a slimmed header ("Open app") and
+  Privacy / Terms links under the sign-in card. +2 E2E tests (root redirects both ways; legal pages
+  reachable from sign-in). The Android app opens straight to sign-in for the same reason.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

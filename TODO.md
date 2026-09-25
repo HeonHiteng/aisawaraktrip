@@ -374,27 +374,45 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   launcher icon + splash; native niceties (status-bar colour, back button).
 - Decision change: V1 is no longer "web-only PWA" — the PWA stays, plus this APK.
 
-## Going real — Step 1: database foundation (in progress)
+## Going real — Step 1: database foundation ✅ (pending one dashboard toggle)
 
-- ✅ **Migrations now run for real.** `tests/db/` executes all migrations + seed on an
-  in-process Postgres (PGlite — no Docker/Supabase needed) with Supabase's roles,
-  `auth.uid()` and default grants stubbed; 18 tests cover schema, catalogue
-  visibility, profile role protection, cross-user isolation, reviews.
-- 🐛 **Security hole found & fixed (`…100002_lock_down_money_writes.sql`).** Any signed-in
-  user (incl. anonymous guests) could insert a `confirmed` booking with total 0 or edit
-  their booking's price via PostgREST with the public anon key. Bookings / payments /
-  status history are now server-only writes (service role); clients keep RLS reads.
-  Also revoked RLS-bypassing privileges (TRUNCATE etc.) from client roles.
-- ✅ `…100001_reviews_and_catalogue_fields.sql` — `reviews` table (public read, server-only
-  write, one per traveller, 1–5), `experiences.rating/review_count` baseline,
-  `vendors.avatar_url` (the app already modelled all of these).
-- ⏭️ Still needs a real Supabase project to verify GoTrue / PostgREST / Storage (the
-  PGlite harness doesn't cover them): create project → `supabase link` →
-  `npm run db:push` → seed → `npm run gen:types`.
-- ⏭️ Seed `rating` / `review_count` / vendor `avatar_url` from the demo fixtures
-  (part of Step 2's catalogue mapping).
+- ✅ **Live on Supabase project "Ai Sarawak"** (`tuwbkgworagassllvsqy`, ap-northeast-1): all 9
+  migrations applied (remote history renamed to match the local filenames so
+  `supabase db push` stays consistent), seed loaded (7 categories · 5 locations ·
+  8 attractions · 5 vendors · 6 experiences · joins · images · rating baseline · avatars).
+  17 tables, RLS on every one.
+- ✅ **Migrations tested before touching the project.** `tests/db/` runs every migration +
+  seed on an in-process Postgres (PGlite; Supabase roles / `auth.uid()` / default grants
+  stubbed) — 21 tests: schema, catalogue visibility, role protection, cross-user
+  isolation, money-table lockdown, function exposure, reviews.
+- 🐛 **Security hole found & never shipped.** Original `0005` let any signed-in user (incl.
+  anonymous guests) insert a `confirmed` RM0 booking or rewrite a booking's price via
+  PostgREST with the public key. `0005` now has read-only booking policies + revokes writes
+  on bookings/payments/status history (server-only, service role); `0008` also revokes
+  TRUNCATE/REFERENCES/TRIGGER from client roles and all writes from `anon`.
+- ✅ `0007` reviews table (public read, server-only write, unique per traveller, 1–5) +
+  `experiences.rating/review_count` baseline + `vendors.avatar_url`.
+- ✅ `0009` hardened functions from the Supabase advisor: `set_updated_at` fixed search_path;
+  trigger functions no longer callable via `/rest/v1/rpc/*`. Remaining advisor note:
+  `is_admin()` is executable by anon/authenticated **on purpose** (RLS policies call it as
+  the caller; it only reports on the caller).
+- ✅ **Verified against the live API with the public key:** anon reads catalogue (7 / 6 rows),
+  sees no bookings/reviews; anon INSERT booking → `42501`; anon PATCH price → `42501`;
+  trigger function → 404.
+- ⏳ **Needs the founder:** Dashboard → Authentication → Sign In / Providers → enable
+  **Anonymous sign-ins** (currently `anonymous_provider_disabled`). Then re-run the
+  signed-in attack test (own-profile read, RM0 booking insert, self-promote to admin,
+  review without booking must all be refused; own trip insert must succeed).
+- ⏳ **Needs the founder:** add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (the MCP
+  connector deliberately doesn't expose it; Step 2's server-side booking/payment writes need it).
+- ⏭️ `types/database.ts` regenerated from the live schema at the start of Step 2 (it will be
+  wired into the typed client there, where any typecheck fallout gets handled).
+- ⏭️ Seed ↔ fixtures parity (Step 2): the demo has a 6th (pending) vendor, 15 bundled photos
+  and per-item images that the seed doesn't yet.
 - Known: vendor `contact` (email/phone) is readable by anon for published vendors —
   decide in Step 2 whether to move it out of the public row.
+- Note: `NEXT_PUBLIC_DEMO_MODE=true` is still set in `.env.local`, so the app still runs on
+  demo data until Step 2 flips it.
 
 ## Blocked / needs the founder
 

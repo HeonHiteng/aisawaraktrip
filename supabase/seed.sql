@@ -215,3 +215,28 @@ insert into public.images (owner_type, owner_id, url, alt, is_primary) values
   ('experience', '44444444-0000-0000-0000-000000000003', 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200&q=70', 'River cruise at sunset', true),
   ('experience', '44444444-0000-0000-0000-000000000005', 'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?w=1200&q=70', 'Kayaking on a jungle river', true)
 on conflict do nothing;
+
+-- ---------- editorial rating baseline + vendor avatars (values from lib/demo/fixtures.ts) ----------
+-- Live reviews (public.reviews) are blended on top of this baseline by the app.
+update public.experiences e
+set rating = v.rating::numeric(2, 1), review_count = v.review_count
+from (values
+  ('kuching-heritage-street-food-walk',        4.9, 128),
+  ('sarawak-laksa-kolo-mee-cooking-class',     4.8,  74),
+  ('santubong-sunset-wildlife-river-cruise',   4.7,  96),
+  ('bako-national-park-full-day-trek',         4.9, 152),
+  ('sarawak-kiri-river-kayaking-semadang',     4.8,  61),
+  ('annah-rais-longhouse-bidayuh-culture-day', 4.9,  88)
+) as v(slug, rating, review_count)
+where e.slug = v.slug;
+
+update public.vendors ve
+set avatar_url = v.url
+from (values
+  ('kuching-food-walks',           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=70'),
+  ('borneo-a-la-carte',            'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=70'),
+  ('santubong-river-cruises',      'https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=200&q=70'),
+  ('adventure-alternative-borneo', 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&q=70'),
+  ('semadang-kayak',               'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?w=200&q=70')
+) as v(slug, url)
+where ve.slug = v.slug;

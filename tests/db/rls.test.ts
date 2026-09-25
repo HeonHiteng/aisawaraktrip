@@ -64,6 +64,17 @@ describe("schema", () => {
     expect(n[0].n).toBe(6);
   });
 
+  it("seeds the rating baseline and vendor avatars the app expects", async () => {
+    const r = await db.query<{ rating: string; review_count: number }>(
+      `select rating::text, review_count from public.experiences where slug = 'kuching-heritage-street-food-walk'`,
+    );
+    expect(r.rows[0]).toEqual({ rating: "4.9", review_count: 128 });
+    const v = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.vendors where avatar_url is not null`,
+    );
+    expect(v.rows[0].n).toBe(5);
+  });
+
   it("creates a profile for every new auth user (guests too)", async () => {
     const r = await db.query<{ n: number }>(
       `select count(*)::int as n from public.profiles where id = any($1)`,
@@ -227,6 +238,25 @@ describe("privileges that bypass RLS", () => {
     await expect(
       as(db, { role: "anon" }, `insert into public.categories (slug, name) values ('x', 'x')`),
     ).rejects.toThrow(DENIED);
+  });
+});
+
+describe("function exposure", () => {
+  it("trigger functions are not callable by client roles", async () => {
+    for (const fn of ["enforce_booking_status", "handle_new_user", "protect_profile_role"]) {
+      for (const actor of [
+        { role: "anon" },
+        { role: "authenticated", sub: alice },
+      ] as const) {
+        await expect(as(db, actor, `select public.${fn}()`)).rejects.toThrow(/permission denied/i);
+      }
+    }
+  });
+
+  it("is_admin() stays callable (RLS policies rely on it) and reports on the caller", async () => {
+    const a = await as<{ is_admin: boolean }>(db, { role: "authenticated", sub: admin }, `select public.is_admin()`);
+    const u = await as<{ is_admin: boolean }>(db, { role: "authenticated", sub: alice }, `select public.is_admin()`);
+    expect([a[0].is_admin, u[0].is_admin]).toEqual([true, false]);
   });
 });
 

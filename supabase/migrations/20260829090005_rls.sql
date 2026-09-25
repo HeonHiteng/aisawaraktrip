@@ -23,6 +23,10 @@ alter table public.booking_status_history enable row level security;
 grant usage on schema public to anon, authenticated;
 grant select on all tables in schema public to anon, authenticated;
 grant insert, update, delete on all tables in schema public to authenticated;
+-- Money tables are server-only writes (service role), whatever the default grants say.
+revoke insert, update, delete
+  on public.bookings, public.payments, public.booking_status_history
+  from anon, authenticated;
 
 -- ---------- profiles ----------
 create policy "profiles_select" on public.profiles
@@ -115,16 +119,13 @@ create policy "itinerary_items_owner_all" on public.itinerary_items
     join public.trips t on t.id = i.trip_id
     where d.id = itinerary_day_id and t.user_id = auth.uid()));
 
--- ---------- bookings: owner reads/creates/updates own; admin all; status guarded by trigger ----------
+-- ---------- bookings: owner/admin READ only ----------
+-- Bookings are written only by the server (service role) after it validates and
+-- snapshots the price. There are deliberately NO insert/update/delete policies:
+-- an owner-write policy would let any signed-in user (incl. anonymous guests) set
+-- their own price/status through PostgREST. See 20260925100002 for the audit trail.
 create policy "bookings_select" on public.bookings
   for select using (user_id = auth.uid() or public.is_admin());
-create policy "bookings_insert_self" on public.bookings
-  for insert with check (user_id = auth.uid());
-create policy "bookings_update" on public.bookings
-  for update using (user_id = auth.uid() or public.is_admin())
-  with check (user_id = auth.uid() or public.is_admin());
-create policy "bookings_admin_delete" on public.bookings
-  for delete using (public.is_admin());
 
 -- ---------- payments: read-only for the owner; writes only via service role ----------
 create policy "payments_select" on public.payments

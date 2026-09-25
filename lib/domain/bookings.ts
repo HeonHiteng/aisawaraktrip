@@ -1,7 +1,12 @@
 import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
 import { demoStoreFor } from "@/lib/demo/store";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getExperienceById } from "@/lib/domain/catalogue";
+import { getTrip } from "@/lib/domain/trips";
+import { isUuid } from "@/lib/domain/mappers/catalogue";
+import { bookingFromRow, bookingToInsert } from "@/lib/domain/mappers/bookings";
 import { weekdayKey } from "@/lib/format";
 import {
   priceBooking,
@@ -9,6 +14,17 @@ import {
   type BookingInput,
   type BookingStatus,
 } from "@/types/booking";
+
+/**
+ * Bookings. Demo mode = the per-user in-memory store.
+ *
+ * Real mode: READS go through the signed-in user's own client (RLS: owner only,
+ * plus an explicit `user_id` filter). WRITES go through the service role, because
+ * clients have no write privileges on `bookings` at all (see migration 0008) —
+ * that is what stops anyone POSTing a confirmed RM0 booking with the public key.
+ * Every write below re-derives identity from the session (`userId`) and prices
+ * from the catalogue; nothing money-related comes from the request.
+ */
 
 const DAY_NAME: Record<string, string> = {
   mon: "Monday",
@@ -30,7 +46,14 @@ export async function listBookings(userId: string): Promise<Booking[]> {
       b.createdAt.localeCompare(a.createdAt),
     );
   }
-  return []; // TODO(phase-6): supabase select from bookings
+  const db = await createClient();
+  const { data, error } = await db
+    .from("bookings")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(`bookings: ${error.message}`);
+  return data.map(bookingFromRow);
 }
 
 export async function bookingsForTrip(
@@ -42,7 +65,16 @@ export async function bookingsForTrip(
       (b) => b.tripId === tripId && b.status !== "cancelled",
     );
   }
-  return [];
+  if (!isUuid(tripId)) return [];
+  const db = await createClient();
+  const { data, error } = await db
+    .from("bookings")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("trip_id", tripId)
+    .neq("status", "cancelled");
+  if (error) throw new Error(`trip bookings: ${error.message}`);
+  return data.map(bookingFromRow);
 }
 
 export async function getBooking(
@@ -54,7 +86,16 @@ export async function getBooking(
       demoStoreFor(userId).bookings.find((b) => b.id === bookingId) ?? null
     );
   }
-  return null;
+  if (!isUuid(bookingId)) return null; // ids come from URLs
+  const db = await createClient();
+  const { data, error } = await db
+    .from("bookings")
+    .select("*")
+    .eq("id", bookingId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`booking: ${error.message}`);
+  return data ? bookingFromRow(data) : null;
 }
 
 export async function createBooking(
@@ -84,37 +125,71 @@ export async function createBooking(
     return { error: "Pick one of the listed start times." };
   }
 
+  // A booking may only hang off one of the caller's OWN trips: settling it later
+  // flips that trip to "booked", and a foreign trip id must never get that far.
+  const tripId =
+    input.tripId && (await getTrip(userId, input.tripId)) ? input.tripId : null;
+
   // Price is snapshotted server-side from the catalogue — never trusted from the client.
   const { subtotal, serviceFee, totalAmount } = priceBooking(
     experience.pricePerPerson,
     numPax,
   );
 
-  const booking: Booking = {
-    ...input,
-    id: uid(),
-    userId,
-    experienceTitle: experience.title,
-    experienceSlug: experience.slug,
-    vendorName: experience.vendor.name,
-    locationName: experience.location?.name ?? null,
-    unitPrice: experience.pricePerPerson,
-    numPax,
-    subtotal,
-    serviceFee,
-    totalAmount,
-    currency: experience.currency,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
-
   if (DEMO_MODE) {
+    const booking: Booking = {
+      ...input,
+      tripId,
+      id: uid(),
+      userId,
+      experienceTitle: experience.title,
+      experienceSlug: experience.slug,
+      vendorName: experience.vendor.name,
+      locationName: experience.location?.name ?? null,
+      unitPrice: experience.pricePerPerson,
+      numPax,
+      subtotal,
+      serviceFee,
+      totalAmount,
+      currency: experience.currency,
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
     demoStoreFor(userId).bookings.unshift(booking);
+    return booking;
   }
-  // TODO(phase-6): insert into Supabase; TODO(phase-7): payment then -> confirmed
-  return booking;
+
+  const { data, error } = await createAdminClient()
+    .from("bookings")
+    .insert(
+      bookingToInsert(
+        userId,
+        { ...input, tripId },
+        {
+          experienceTitle: experience.title,
+          experienceSlug: experience.slug,
+          vendorName: experience.vendor.name,
+          locationName: experience.location?.name ?? null,
+          unitPrice: experience.pricePerPerson,
+          subtotal,
+          serviceFee,
+          totalAmount,
+          currency: experience.currency,
+        },
+      ),
+    )
+    .select("*")
+    .single();
+  if (error) throw new Error(`create booking: ${error.message}`);
+  return bookingFromRow(data);
 }
 
+/**
+ * The traveller-facing status change. Only cancelling is available to a traveller,
+ * and only for their own pending/confirmed booking — the guard is in the UPDATE's
+ * WHERE clause, so it is one atomic statement (no read-then-write race). Admins
+ * change status through `lib/domain/admin`.
+ */
 export async function setBookingStatus(
   userId: string,
   bookingId: string,
@@ -127,6 +202,17 @@ export async function setBookingStatus(
       b.status = status;
       if (reason && status === "cancelled") b.specialRequests = reason;
     }
+    return;
   }
-  // TODO(phase-6): update via status-transition-guarded path
+  if (status !== "cancelled") {
+    throw new Error("Travellers can only cancel a booking.");
+  }
+  if (!isUuid(bookingId)) return;
+  const { error } = await createAdminClient()
+    .from("bookings")
+    .update({ status: "cancelled", cancellation_reason: reason ?? null })
+    .eq("id", bookingId)
+    .eq("user_id", userId)
+    .in("status", ["pending", "confirmed"]);
+  if (error) throw new Error(`cancel booking: ${error.message}`);
 }

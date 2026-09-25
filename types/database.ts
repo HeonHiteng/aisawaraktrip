@@ -189,8 +189,11 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           experience_id: string
+          experience_slug: string
+          experience_title: string
           id: string
           itinerary_item_id: string | null
+          location_name: string | null
           num_adults: number
           num_children: number
           num_pax: number | null
@@ -204,6 +207,7 @@ export type Database = {
           unit_price: number
           updated_at: string
           user_id: string
+          vendor_name: string
         }
         Insert: {
           booking_date: string
@@ -214,8 +218,11 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           experience_id: string
+          experience_slug: string
+          experience_title: string
           id?: string
           itinerary_item_id?: string | null
+          location_name?: string | null
           num_adults?: number
           num_children?: number
           num_pax?: number | null
@@ -229,6 +236,7 @@ export type Database = {
           unit_price: number
           updated_at?: string
           user_id: string
+          vendor_name: string
         }
         Update: {
           booking_date?: string
@@ -239,8 +247,11 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           experience_id?: string
+          experience_slug?: string
+          experience_title?: string
           id?: string
           itinerary_item_id?: string | null
+          location_name?: string | null
           num_adults?: number
           num_children?: number
           num_pax?: number | null
@@ -254,6 +265,7 @@ export type Database = {
           unit_price?: number
           updated_at?: string
           user_id?: string
+          vendor_name?: string
         }
         Relationships: [
           {
@@ -989,6 +1001,18 @@ export type Database = {
       save_itinerary: {
         Args: { p_itinerary: Json; p_trip_id: string }
         Returns: string
+      }
+      settle_payment: {
+        Args: {
+          p_amount: number
+          p_expected_user?: string
+          p_provider: string
+          p_provider_payment_id?: string
+          p_provider_ref: string
+          p_raw?: Json
+          p_status: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: Json
       }
     }
     Enums: {

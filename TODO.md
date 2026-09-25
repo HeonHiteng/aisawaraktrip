@@ -442,7 +442,29 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   stored as the group total (per person × travellers). **Verified:** 9 SQL tests (PGlite),
   8 mapper tests, and 5 live tests with real guest users (build → save → read back identical,
   refine → v2, remove item, status, cross-user isolation, delete cascade); test users deleted.
-- ⏭️ 2.3 bookings + payments
+- ✅ **2.3 Bookings + payments on Supabase (the money path).**
+  Migrations `…100002` / `…100003`: bookings snapshot the listing (title/slug/vendor/location)
+  like the price; a CHECK makes the money add up in the database (`total = subtotal + fee`,
+  `subtotal = unit × pax`); `settle_payment(...)` — the ONLY way a payment becomes `paid` and a
+  booking `confirmed`: one transaction, payment + booking rows locked, idempotent (a retried /
+  replayed callback can't confirm or email twice — the caller learns whether *it* confirmed),
+  amount checked against the snapshot taken at `startPayment`, a paid callback for a booking
+  cancelled mid-payment never revives it (logged "refund needed"), the return path can only
+  settle its own payment, and only the service role may execute it. Reads go through the
+  traveller's own client (RLS + explicit `user_id`); writes go through the service role (clients
+  have no write privilege — migration 0008). A booking can only attach to the caller's own trip.
+  Travellers can only *cancel*, with the guard in the UPDATE's WHERE clause (atomic).
+  **Mock-gateway guard:** `PAYMENT_PROVIDER=mock` now refuses to run in production against a real
+  database unless `ALLOW_MOCK_PAYMENTS=true` (the fake gateway lets the traveller pick "approve").
+  **Verified:** 19 SQL tests (PGlite; every settle edge case), 10 unit tests, 11 live tests with
+  real guests (create → snapshot, rules, trip ownership, start → settle → confirmed + one email,
+  tampered amount, cancel/fail/retry, stranger's ref, paid-after-cancel, cancel guards, junk ids).
+- ⚠️ Known gaps (product decisions, not bugs): **capacity per slot is not enforced** (same as demo;
+  needs a "pending hold" policy), **refunds** for cancelled confirmed bookings and for
+  paid-after-cancel are logged, not processed (needs the provider's refund API), and
+  `/api/payments/webhook` still only ACKs (Step 5: signature verification, then
+  `settlePayment(null, …)`).
+- ⏭️ 2.4 reviews write + gate (next) · 2.5 admin via service role
   (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
   2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.
 - Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be

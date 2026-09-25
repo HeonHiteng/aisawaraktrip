@@ -42,8 +42,10 @@ beforeAll(async () => {
       { role: "service" },
       `insert into public.bookings
          (user_id, experience_id, booking_date, num_adults, unit_price, subtotal,
-          service_fee, total_amount, customer_name, customer_email)
-       values ($1, $2, '2026-12-02', 2, 100, 200, 10, 210, 'Alice', 'alice@example.test')
+          service_fee, total_amount, customer_name, customer_email,
+          experience_title, experience_slug, vendor_name)
+       values ($1, $2, '2026-12-02', 2, 100, 200, 10, 210, 'Alice', 'alice@example.test',
+               'Food walk', 'food-walk', 'Kuching Food Walks')
        returning id`,
       [alice, experienceId],
     )
@@ -191,11 +193,14 @@ describe("bookings & payments: money fields are server-only", () => {
         alice_(),
         `insert into public.bookings
            (user_id, experience_id, booking_date, unit_price, subtotal, total_amount,
-            status, customer_name, customer_email)
-         values ($1, $2, '2026-12-05', 0, 0, 0, 'confirmed', 'Alice', 'alice@example.test')`,
+            status, customer_name, customer_email,
+            experience_title, experience_slug, vendor_name)
+         values ($1, $2, '2026-12-05', 0, 0, 0, 'confirmed', 'Alice', 'alice@example.test',
+                 'x', 'x', 'x')`,
         [alice, experienceId],
       ),
-    ).rejects.toThrow(DENIED);
+      // must be the privilege check itself, not some other constraint tripping first
+    ).rejects.toThrow(/permission denied/i);
   });
 
   it("a client cannot edit the price or status of their own booking", async () => {

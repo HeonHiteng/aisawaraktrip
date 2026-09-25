@@ -433,7 +433,16 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   server started by another tool failed with `UNABLE_TO_VERIFY_LEAF_SIGNATURE`. `npm run
   dev:real` now passes `DEV_EXTRA_CA_CERTS` (in `.env.local`) as `NODE_EXTRA_CA_CERTS` —
   verification stays ON. Never use `NODE_TLS_REJECT_UNAUTHORIZED=0`.
-- ⏭️ 2.2 trips (trip → itinerary → days → items, versioning) · 2.3 bookings + payments
+- ✅ **2.2 Trips on Supabase.** Migration `20260926100001`: `save_itinerary` / `create_trip`
+  SQL functions — the whole trip → itinerary → days → items tree in ONE transaction, run as the
+  signed-in user (SECURITY INVOKER, so RLS enforces ownership), trip row locked so concurrent
+  saves serialise, version assigned by the database, "one current itinerary per trip" is a
+  unique index. A failed save leaves the previous itinerary untouched (tested). Items now
+  carry `attractionId` (a slug can go stale). `lib/domain/{trips,mappers/trips}` wired; budget
+  stored as the group total (per person × travellers). **Verified:** 9 SQL tests (PGlite),
+  8 mapper tests, and 5 live tests with real guest users (build → save → read back identical,
+  refine → v2, remove item, status, cross-user isolation, delete cascade); test users deleted.
+- ⏭️ 2.3 bookings + payments
   (atomic DB functions; `settlePayment` idempotent) · 2.4 reviews write + booking gate ·
   2.5 admin via service role · then flip `NEXT_PUBLIC_DEMO_MODE=false`.
 - Known: in real mode `getExperienceById` only sees PUBLISHED experiences (a booking can't be

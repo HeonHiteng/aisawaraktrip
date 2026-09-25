@@ -984,7 +984,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_trip: { Args: { p_itinerary: Json; p_trip: Json }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      save_itinerary: {
+        Args: { p_itinerary: Json; p_trip_id: string }
+        Returns: string
+      }
     }
     Enums: {
       booking_status:

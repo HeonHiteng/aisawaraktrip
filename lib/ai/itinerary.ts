@@ -185,6 +185,7 @@ function expItem(
     estimatedCost: e.pricePerPerson * pax(trip),
     locationLabel: e.location?.name ?? "Sarawak",
     attractionSlug: null,
+    attractionId: null,
     experienceId: e.id,
     bookable: true,
   };
@@ -208,6 +209,7 @@ function attItem(
     estimatedCost: unit * pax(trip),
     locationLabel: a.location?.name ?? "Sarawak",
     attractionSlug: a.slug,
+    attractionId: a.id,
     experienceId: null,
     bookable: false,
   };
@@ -240,6 +242,7 @@ function mealItem(
     estimatedCost: unit * pax(trip),
     locationLabel: "Kuching",
     attractionSlug: null,
+    attractionId: null,
     experienceId: null,
     bookable: false,
   };
@@ -258,6 +261,7 @@ function freeTime(start: string, label: string): ItineraryItem {
     estimatedCost: 0,
     locationLabel: null,
     attractionSlug: null,
+    attractionId: null,
     experienceId: null,
     bookable: false,
   };
@@ -282,6 +286,7 @@ function transportItem(
     estimatedCost: groupCost, // per vehicle, not per person
     locationLabel: direction === "out" ? area : CITY,
     attractionSlug: null,
+    attractionId: null,
     experienceId: null,
     bookable: false,
   };

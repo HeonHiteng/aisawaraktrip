@@ -56,7 +56,8 @@ export interface ItineraryItem {
   whyRecommended: string | null;
   estimatedCost: number; // MYR, for the whole group
   locationLabel: string | null;
-  attractionSlug: string | null;
+  attractionSlug: string | null; // for links
+  attractionId: string | null; // for persistence (a slug can go stale)
   experienceId: string | null;
   bookable: boolean;
 }

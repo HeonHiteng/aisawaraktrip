@@ -49,6 +49,10 @@ const SUPABASE_STUBS = `
   grant usage on schema public, auth, storage to anon, authenticated, service_role;
   alter default privileges in schema public
     grant all on tables to anon, authenticated, service_role;
+  -- Supabase also grants EXECUTE on new functions to the API roles (on top of
+  -- Postgres' default of PUBLIC), so a migration has to REVOKE what it means to.
+  alter default privileges in schema public
+    grant execute on functions to anon, authenticated, service_role;
 `;
 
 export async function freshDb(): Promise<PGlite> {

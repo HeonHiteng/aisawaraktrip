@@ -374,6 +374,28 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   launcher icon + splash; native niceties (status-bar colour, back button).
 - Decision change: V1 is no longer "web-only PWA" — the PWA stays, plus this APK.
 
+## Going real — Step 1: database foundation (in progress)
+
+- ✅ **Migrations now run for real.** `tests/db/` executes all migrations + seed on an
+  in-process Postgres (PGlite — no Docker/Supabase needed) with Supabase's roles,
+  `auth.uid()` and default grants stubbed; 18 tests cover schema, catalogue
+  visibility, profile role protection, cross-user isolation, reviews.
+- 🐛 **Security hole found & fixed (`…100002_lock_down_money_writes.sql`).** Any signed-in
+  user (incl. anonymous guests) could insert a `confirmed` booking with total 0 or edit
+  their booking's price via PostgREST with the public anon key. Bookings / payments /
+  status history are now server-only writes (service role); clients keep RLS reads.
+  Also revoked RLS-bypassing privileges (TRUNCATE etc.) from client roles.
+- ✅ `…100001_reviews_and_catalogue_fields.sql` — `reviews` table (public read, server-only
+  write, one per traveller, 1–5), `experiences.rating/review_count` baseline,
+  `vendors.avatar_url` (the app already modelled all of these).
+- ⏭️ Still needs a real Supabase project to verify GoTrue / PostgREST / Storage (the
+  PGlite harness doesn't cover them): create project → `supabase link` →
+  `npm run db:push` → seed → `npm run gen:types`.
+- ⏭️ Seed `rating` / `review_count` / vendor `avatar_url` from the demo fixtures
+  (part of Step 2's catalogue mapping).
+- Known: vendor `contact` (email/phone) is readable by anon for published vendors —
+  decide in Step 2 whether to move it out of the public row.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

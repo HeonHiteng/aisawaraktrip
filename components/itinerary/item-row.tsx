@@ -104,7 +104,7 @@ export function ItemRow({
                   "ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-semibold",
                   booking.status === "confirmed"
                     ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
-                    : "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+                    : "bg-amber-500/15 text-amber-800 dark:text-amber-400",
                 )}
               >
                 <Check className="size-3" />

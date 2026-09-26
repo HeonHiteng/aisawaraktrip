@@ -77,8 +77,10 @@ export default function PrivacyPage() {
       <h2>Your rights</h2>
       <p>
         You may access, correct or delete your data, and withdraw consent, by
-        contacting us. You can edit your profile at any time, and delete a trip
-        from within the app.
+        contacting us. You can edit your profile at any time, delete a trip from
+        within the app, and delete your whole account from{" "}
+        <strong>Profile → Delete my account</strong> — see{" "}
+        <a href="/delete-account">how to delete your account and data</a>.
       </p>
 
       <h2>Contact</h2>

@@ -100,6 +100,7 @@ export function TripForm({
             Describe your trip
           </p>
           <Textarea
+            aria-label="Describe your trip"
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value);
@@ -205,6 +206,7 @@ export function TripForm({
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">or MYR</span>
                 <Input
+                  aria-label="Budget per person in MYR"
                   name="budgetPerPerson"
                   type="number"
                   min={0}
@@ -362,27 +364,29 @@ function Stepper({
   disabled?: boolean;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" role="group" aria-label={label}>
       <Label>{label}</Label>
       <div className="flex items-center gap-1.5">
         <button
           type="button"
+          aria-label={`Fewer ${label.toLowerCase()}`}
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={disabled || value <= min}
           className="grid size-8 place-items-center rounded-full border border-border disabled:opacity-40"
         >
-          <Minus className="size-3.5" />
+          <Minus className="size-3.5" aria-hidden />
         </button>
-        <span className="w-5 text-center text-sm font-medium tabular-nums">
+        <span className="w-5 text-center text-sm font-medium tabular-nums" aria-live="polite">
           {value}
         </span>
         <button
           type="button"
+          aria-label={`More ${label.toLowerCase()}`}
           onClick={() => onChange(Math.min(20, value + 1))}
           disabled={disabled || value >= 20}
           className="grid size-8 place-items-center rounded-full border border-border disabled:opacity-40"
         >
-          <Plus className="size-3.5" />
+          <Plus className="size-3.5" aria-hidden />
         </button>
       </div>
     </div>

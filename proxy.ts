@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { DEMO_MODE } from "@/lib/demo/mode";
+import { buildCsp, newNonce } from "@/lib/csp";
 
 /**
  * Next.js 16 renamed `middleware` -> `proxy` (nodejs runtime only).
@@ -37,14 +38,32 @@ function needsUser(pathname: string): boolean {
   return PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
+  : undefined;
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Per-request nonce: the CSP goes on the REQUEST (Next reads the nonce from it and tags its own
+  // scripts while rendering) and on the RESPONSE (the browser enforces it). See lib/csp.ts.
+  const nonce = newNonce();
+  const csp = buildCsp({ nonce, isDev: process.env.NODE_ENV !== "production", supabaseHost });
+  const secure = (h: Headers) => {
+    h.set("x-nonce", nonce);
+    h.set("Content-Security-Policy", csp);
+    return h;
+  };
+  const respond = (r: NextResponse) => {
+    r.headers.set("Content-Security-Policy", csp);
+    return r;
+  };
 
   if (DEMO_MODE) {
     const autoGuest =
       needsUser(pathname) && !request.cookies.get(DEMO_COOKIE);
 
-    const requestHeaders = new Headers(request.headers);
+    const requestHeaders = secure(new Headers(request.headers));
     requestHeaders.set("x-pathname", pathname);
     if (autoGuest) {
       const existing = request.headers.get("cookie");
@@ -56,9 +75,11 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    const response = NextResponse.next({
-      request: { headers: requestHeaders },
-    });
+    const response = respond(
+      NextResponse.next({
+        request: { headers: requestHeaders },
+      }),
+    );
     if (autoGuest) {
       response.cookies.set(DEMO_COOKIE, "guest", {
         httpOnly: true,
@@ -72,10 +93,10 @@ export async function proxy(request: NextRequest) {
 
   // ---- real mode: Supabase session refresh ----
   // Keep the proven Supabase SSR cookie pattern untouched; only add x-pathname.
-  const requestHeaders = new Headers(request.headers);
+  const requestHeaders = secure(new Headers(request.headers));
   requestHeaders.set("x-pathname", pathname);
 
-  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  let response = respond(NextResponse.next({ request: { headers: requestHeaders } }));
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -90,10 +111,12 @@ export async function proxy(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
-        // On a token refresh we re-issue the response. x-pathname is only used
-        // to build a return URL for signed-OUT users, so it's fine that this
-        // branch (which implies a valid session) doesn't re-attach it.
-        response = NextResponse.next({ request });
+        // On a token refresh we re-issue the response. The request headers are rebuilt (they now
+        // carry the refreshed cookies) and must still hold the CSP/nonce, or Next would render
+        // this page's scripts without a nonce and the browser would block them.
+        const refreshed = secure(new Headers(request.headers));
+        refreshed.set("x-pathname", pathname);
+        response = respond(NextResponse.next({ request: { headers: refreshed } }));
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );

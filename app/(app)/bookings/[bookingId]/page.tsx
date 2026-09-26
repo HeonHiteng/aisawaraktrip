@@ -11,6 +11,7 @@ import { getTrip } from "@/lib/domain/trips";
 import { formatDate, formatMYR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BOOKING_STATUS_META } from "@/types/booking";
+import { isHoldLapsed } from "@/lib/booking-hold";
 import { cancelBooking } from "@/app/(app)/bookings/actions";
 
 export async function generateMetadata({
@@ -31,6 +32,7 @@ export default async function BookingDetailPage({
   if (!b) notFound();
 
   const meta = BOOKING_STATUS_META[b.status];
+  const lapsed = isHoldLapsed(b);
   const canCancel = b.status === "pending" || b.status === "confirmed";
   const trip = b.tripId ? await getTrip(user.id, b.tripId) : null;
 
@@ -61,11 +63,13 @@ export default async function BookingDetailPage({
         <div className="flex items-start gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
           <CalendarClock className="mt-0.5 size-4 shrink-0 text-amber-600" />
           <div className="flex-1">
-            <p className="font-medium text-amber-700 dark:text-amber-400">
-              Awaiting payment
+            <p className="font-medium text-amber-800 dark:text-amber-400">
+              {lapsed ? "Seat hold expired" : "Awaiting payment"}
             </p>
             <p className="text-muted-foreground">
-              Your spot is held. Pay now to confirm it.
+              {lapsed
+                ? "We released your seats after 30 minutes. You can still pay — we'll check they're free and hold them again."
+                : "Your spot is held. Pay now to confirm it."}
             </p>
             <Link
               href={`/checkout/${b.id}`}
@@ -94,7 +98,7 @@ export default async function BookingDetailPage({
           <h1 className="text-lg font-bold leading-tight">
             {b.experienceTitle}
           </h1>
-          <StatusBadge label={meta.label} tone={meta.tone} />
+          <StatusBadge label={lapsed ? "Hold expired" : meta.label} tone={meta.tone} />
         </div>
         <p className="text-sm text-muted-foreground">
           {b.vendorName}

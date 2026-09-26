@@ -39,7 +39,7 @@ export default async function AdminVendorsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Vendors</h1>
           {needsAttention > 0 && (
-            <p className="text-sm text-amber-600 dark:text-amber-400">
+            <p className="text-sm text-amber-800 dark:text-amber-400">
               {needsAttention} awaiting review
             </p>
           )}

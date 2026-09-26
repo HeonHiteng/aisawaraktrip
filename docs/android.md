@@ -55,9 +55,11 @@ Install: copy the APK to the phone and open it (allow "install unknown apps"), o
 
 ## Before Google Play
 
-- Deploy the app to https and rebuild against that URL.
-- Create a **release keystore** (keep it and its passwords backed up — losing it
-  means you can't update the app), configure signing, build an `.aab`.
-- Replace the default Capacitor launcher icon and splash (`android/app/src/main/res`).
+Icons, splash, release signing, the signed-bundle build and the store listing are done — the
+step-by-step (keystore, `npm run android:aab`, Play Console forms, Data safety answers, launch
+checklist) is in **`docs/play-store.md`**.
+
 - Payments: real gateways (Stripe/Billplz) redirect to a browser; the mock gateway
-  is in-app so it works in the WebView today.
+  is in-app so it works in the WebView today — but it must be switched off before a Play release.
+- The emulator images here ship an old WebView (83), below the app's floor, so they show the
+  "can't open" screen; use a real phone (or an image with Chrome/WebView 111+) to see the app.

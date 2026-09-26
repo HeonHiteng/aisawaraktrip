@@ -6,7 +6,8 @@ import { Avatar } from "@/components/common/avatar";
 import { formatMYR } from "@/lib/format";
 import type { Experience } from "@/types/catalogue";
 
-export function ExperienceCard({ experience }: { experience: Experience }) {
+/** `priority`: the card at the top of the screen — load its photo eagerly (it is the page's largest paint). */
+export function ExperienceCard({ experience, priority }: { experience: Experience; priority?: boolean }) {
   const img = experience.images[0];
   const verified = experience.vendor.verificationStatus === "verified";
 
@@ -21,6 +22,7 @@ export function ExperienceCard({ experience }: { experience: Experience }) {
           alt={img?.alt ?? experience.title}
           category={experience.categories[0]}
           seed={experience.slug}
+          priority={priority}
           className="transition-transform duration-500 group-hover:scale-105"
         />
         {/* legibility scrim */}

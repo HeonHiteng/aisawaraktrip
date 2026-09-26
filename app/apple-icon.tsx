@@ -1,10 +1,12 @@
 import { ImageResponse } from "next/og";
+import mark from "@/brand/mark.json";
 
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-// Home-screen icon for iOS. Placeholder mark — swap for real artwork later.
+// Home-screen icon for iOS: the brand mark from brand/mark.json.
 export default function AppleIcon() {
+  const [c1, c2] = mark.gradient;
   return new ImageResponse(
     (
       <div
@@ -14,13 +16,17 @@ export default function AppleIcon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #7c3aed 0%, #c026d3 100%)",
-          color: "#ffffff",
-          fontSize: 110,
-          fontWeight: 700,
+          background: `linear-gradient(135deg, ${c1} 0%, ${c2} 100%)`,
         }}
       >
-        S
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={`${mark.bounds.x + mark.bounds.w / 2 - 256} ${mark.bounds.y + mark.bounds.h / 2 - 256} 512 512`}
+        >
+          <path d={mark.pin} fill="#ffffff" fillRule="evenodd" />
+          <path d={mark.spark} fill="#ffffff" />
+        </svg>
       </div>
     ),
     { ...size },

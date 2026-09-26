@@ -13,8 +13,8 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 5 | Itinerary management | ✅ live on Supabase |
 | 6 | Booking system | ✅ live on Supabase (slot capacity enforced, 30-min holds) |
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
-| 8 | Admin dashboard | ✅ live on Supabase (admin's own session + RLS) |
-| 9 | Testing & security | 🔨 (tests + headers + rate limiting done; Sentry optional) |
+| 8 | Admin dashboard | ✅ live on Supabase (admin's own session + RLS; needs-attention panel, photo upload) |
+| 9 | Testing & security | 🔨 (tests, nonce CSP, rate limiting, a11y scan done; Sentry optional) |
 | 10 | Deployment | ✅ staging live: https://sarawak-trip-planner.vercel.app (auto-deploys from `main`) |
 
 ## Phase 1 — setup
@@ -575,6 +575,35 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   email (password still clears). Now a permanent regression assertion.
 - ✅ Also confirmed by the run: unpublished (draft) experiences are hidden from travellers; the
   guest profile shows the real trip/booking counts.
+
+## "All four free items" pass (admin attention, photo upload, Play prep, security & polish)
+
+- ✅ **Admin "needs attention"** (`lib/admin-attention.ts`, `components/admin/needs-attention.tsx`): the
+  overview lists **refunds owed** (booking cancelled but the payment is still `paid` — e.g. paid after the
+  seat hold lapsed and the slot filled), **lapsed unpaid** holds, and vendors awaiting verification, or an
+  "All clear". Admin can now move Cancelled → Refunded to record a refund (which clears the item).
+- ✅ **Photo upload** in the experience / attraction / vendor forms (`components/admin/photo-field.tsx`):
+  upload from the device (shrunk to ≤1600 px WebP in the browser → Storage bucket `catalogue`, admin-only
+  by RLS) or paste a link; "Make cover"; removing a just-uploaded photo deletes the file. Migration
+  `20260926080032_catalogue_bucket_limits` (applied live): catalogue bucket 5 MB JPG/PNG/WebP only (no SVG),
+  avatars 2 MB. Known gap: replacing/removing an already-saved photo leaves the old file in the bucket.
+- ✅ **Google Play preparation** — see `docs/play-store.md`: brand mark (`brand/mark.json`) → launcher icons
+  (adaptive + round), gradient splash, `npm run android:assets`; release signing + `npm run android:aab`
+  (verified end-to-end with a throwaway key: signed APK + AAB); versionCode bumping; `allowBackup=false`;
+  store icon, feature graphic, 5 phone screenshots (`npm run play:screenshots`) and listing copy in
+  `store/play/`; Data-safety / content-rating / launch checklist. **Play requires account deletion**, so it
+  was built: Profile → *Delete my account* (typed `DELETE`; refused while a confirmed booking is upcoming, a
+  refund is owed, or for admins) + public `/delete-account` page + privacy-policy text.
+- ✅ **Security & polish**: **nonce-based CSP** (no inline scripts; `lib/csp.ts`, set in `proxy.ts`; verified on
+  a production build with zero violations); `X-Powered-By` off; travellers see **"Hold expired"** instead of
+  a stale "Awaiting payment"; **axe accessibility scan** of every main screen (`tests/e2e/a11y.spec.ts`) — fixed
+  unlabeled stepper/budget/description controls and low-contrast amber/green text; LCP image priority; profile
+  form controlled (kills a Base UI warning).
+- 🧪 New tests: unit (attention rules, photo helpers, account-deletion rules, CSP, hold-lapsed), DB (bucket
+  limits), live (storage RLS + limits, account deletion), real-browser (upload + attention + guest deletion),
+  a11y. Totals: unit+DB **265**, live **47**, demo E2E **9**, real E2E **4**.
+- ⚠️ Not verifiable here: the APK running the real app — the only emulator image ships WebView 83 (< 111 floor),
+  so it shows the friendly "can't open" screen. Splash and icon were checked on it; try the APK on a real phone.
 
 ## Blocked / needs the founder
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createBooking, getBooking, setBookingStatus } from "@/lib/domain/bookings";
 import { settlePayment, startPayment } from "@/lib/domain/payments";
-import { HOLD_MINUTES, holdUntil, slotFullMessage } from "@/lib/booking-hold";
+import { HOLD_MINUTES, holdUntil, isHoldLapsed, slotFullMessage } from "@/lib/booking-hold";
 import type { Booking, BookingInput } from "@/types/booking";
 
 /**
@@ -151,5 +151,16 @@ describe("checkout and late payment", () => {
     const after = (await getBooking(b.userId, b.id))!;
     expect(after.status).toBe("confirmed");
     expect(after.holdExpiresAt).toBeNull();
+  });
+});
+
+describe("isHoldLapsed", () => {
+  const now = Date.parse("2026-09-26T12:00:00Z");
+  it("is true only for an unpaid booking whose hold has run out", () => {
+    expect(isHoldLapsed({ status: "pending", holdExpiresAt: "2026-09-26T11:59:00Z" }, now)).toBe(true);
+    expect(isHoldLapsed({ status: "pending", holdExpiresAt: "2026-09-26T12:01:00Z" }, now)).toBe(false);
+    expect(isHoldLapsed({ status: "pending", holdExpiresAt: null }, now)).toBe(false);
+    expect(isHoldLapsed({ status: "confirmed", holdExpiresAt: "2026-09-26T11:00:00Z" }, now)).toBe(false);
+    expect(isHoldLapsed({ status: "cancelled", holdExpiresAt: "2026-09-26T11:00:00Z" }, now)).toBe(false);
   });
 });

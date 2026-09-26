@@ -22,3 +22,11 @@ export function slotFullMessage(left: number): string {
 
 export const SLOT_FULL_AT_CHECKOUT =
   "Sorry — that time filled up while you were checking out. Please pick another time or date.";
+
+/** An unpaid booking whose seat hold has run out (its seats are open to others again). */
+export function isHoldLapsed(
+  b: { status: string; holdExpiresAt?: string | null },
+  now: number = Date.now(),
+): boolean {
+  return b.status === "pending" && !!b.holdExpiresAt && new Date(b.holdExpiresAt).getTime() <= now;
+}

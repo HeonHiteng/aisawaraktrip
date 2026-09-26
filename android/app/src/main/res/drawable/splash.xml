@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen: brand gradient with the app mark in the middle. The mark is generated per
+     density by `npm run android:assets` (drawable-*dpi/splash_mark.png). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:startColor="#6D28D9"
+                android:endColor="#C026D3"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item>
+        <bitmap android:src="@drawable/splash_mark" android:gravity="center" />
+    </item>
+</layer-list>

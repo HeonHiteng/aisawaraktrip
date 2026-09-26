@@ -11,7 +11,7 @@ function price(a: Attraction) {
   return `${formatMYR(a.priceMin)}–${formatMYR(a.priceMax)}`;
 }
 
-export function AttractionCard({ attraction }: { attraction: Attraction }) {
+export function AttractionCard({ attraction, priority }: { attraction: Attraction; priority?: boolean }) {
   const img = attraction.images[0];
   return (
     <Link
@@ -24,6 +24,7 @@ export function AttractionCard({ attraction }: { attraction: Attraction }) {
           alt={img?.alt ?? attraction.name}
           category={attraction.categories[0]}
           seed={attraction.slug}
+          priority={priority}
           className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />

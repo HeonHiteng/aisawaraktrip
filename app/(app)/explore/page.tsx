@@ -63,11 +63,11 @@ export default async function ExplorePage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {tab === "experiences"
-            ? experiences.map((e) => (
-                <ExperienceCard key={e.id} experience={e} />
+            ? experiences.map((e, i) => (
+                <ExperienceCard key={e.id} experience={e} priority={i === 0} />
               ))
-            : attractions.map((a) => (
-                <AttractionCard key={a.id} attraction={a} />
+            : attractions.map((a, i) => (
+                <AttractionCard key={a.id} attraction={a} priority={i === 0} />
               ))}
         </div>
       )}

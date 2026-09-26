@@ -15,10 +15,17 @@ export default async function LoginPage({
   const next = safeNextPath(raw, "/home");
   if (await getUser()) redirect(next);
   return (
-    <AuthForm
-      mode="login"
-      action={login}
-      next={raw ? next : undefined}
-    />
+    <>
+      {sp.deleted === "1" && (
+        <p role="status" className="mb-4 rounded-xl border border-border bg-muted px-4 py-3 text-center text-sm">
+          Your account and data have been deleted.
+        </p>
+      )}
+      <AuthForm
+        mode="login"
+        action={login}
+        next={raw ? next : undefined}
+      />
+    </>
   );
 }

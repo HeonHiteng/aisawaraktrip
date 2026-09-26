@@ -51,3 +51,8 @@ next-env.d.ts
 
 # built APKs (local artifacts)
 /apk
+
+# Android release signing — NEVER commit these (losing the keystore = can't update the app)
+*.jks
+*.keystore
+android/keystore.properties

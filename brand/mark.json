@@ -1,0 +1,7 @@
+{
+  "_": "The app mark on a 512x512 canvas: a location pin (with a hole) and an AI sparkle. Used by app/icon.tsx, app/apple-icon.tsx and scripts/android-assets.mjs.",
+  "gradient": ["#7c3aed", "#c026d3"],
+  "pin": "M256 104C180 104 122 162 122 236C122 320 220 388 256 432C292 388 390 320 390 236C390 162 332 104 256 104ZM202 232a54 54 0 1 0 108 0a54 54 0 1 0 -108 0Z",
+  "spark": "M390 56Q396 104 444 110Q396 116 390 164Q384 116 336 110Q384 104 390 56Z",
+  "bounds": { "x": 122, "y": 56, "w": 322, "h": 376 }
+}

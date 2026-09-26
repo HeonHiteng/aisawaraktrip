@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { DELETE_CONFIRM_WORD } from "@/lib/account-deletion";
+import { deleteAccount } from "@/lib/domain/account";
 import { createClient } from "@/lib/supabase/server";
 import { DEMO_MODE } from "@/lib/demo/mode";
+import { clearDemoUser } from "@/lib/demo/session";
+import { rateLimit } from "@/lib/rate-limit";
 import { profileSchema } from "@/lib/validation/auth";
 
 export type ProfileState = { error?: string; message?: string };
@@ -44,4 +50,30 @@ export async function updateProfile(
   revalidatePath("/profile");
   revalidatePath("/", "layout");
   return { message: "Profile saved." };
+}
+
+export type DeleteAccountState = { error?: string };
+
+/**
+ * Permanently delete the account. Needs the typed word DELETE so it can't be a stray tap.
+ * On success the session is ended and the person lands on the sign-in screen.
+ */
+export async function deleteMyAccount(
+  _prev: DeleteAccountState,
+  formData: FormData,
+): Promise<DeleteAccountState> {
+  const user = await requireUser();
+  if (String(formData.get("confirm") ?? "").trim() !== DELETE_CONFIRM_WORD) {
+    return { error: `Type ${DELETE_CONFIRM_WORD} to confirm.` };
+  }
+  const rl = await rateLimit(`delete-account:${user.id}`, 5, 10 * 60_000);
+  if (!rl.ok) return { error: `Too many attempts. Try again in ${rl.retryAfter}s.` };
+
+  const result = await deleteAccount(user.id);
+  if ("error" in result) return { error: result.error };
+
+  if (DEMO_MODE) await clearDemoUser();
+  else await (await createClient()).auth.signOut(); // clears the cookies; the user no longer exists
+  revalidatePath("/", "layout");
+  redirect("/login?deleted=1");
 }

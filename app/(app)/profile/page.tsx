@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/common/avatar";
 import { ProfileForm } from "@/components/app/profile-form";
+import { DeleteAccountForm } from "@/components/app/delete-account-form";
 import { UpgradeGuestForm } from "@/components/app/upgrade-guest-form";
 import { getProfile, requireUser } from "@/lib/auth";
 import { listTrips } from "@/lib/domain/trips";
@@ -98,6 +99,7 @@ export default async function ProfilePage() {
             Sign out
           </Button>
         </form>
+        <DeleteAccountForm isGuest={isGuest} />
       </div>
     </div>
   );

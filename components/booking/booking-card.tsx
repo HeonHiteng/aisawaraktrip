@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CalendarDays, Users } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
+import { isHoldLapsed } from "@/lib/booking-hold";
 import { formatDate, formatMYR } from "@/lib/format";
 import { BOOKING_STATUS_META, type Booking } from "@/types/booking";
 
 export function BookingCard({ booking }: { booking: Booking }) {
   const meta = BOOKING_STATUS_META[booking.status];
+  const lapsed = isHoldLapsed(booking);
   return (
     <Link
       href={`/bookings/${booking.id}`}
@@ -13,7 +15,7 @@ export function BookingCard({ booking }: { booking: Booking }) {
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold leading-snug">{booking.experienceTitle}</h3>
-        <StatusBadge label={meta.label} tone={meta.tone} />
+        <StatusBadge label={lapsed ? "Hold expired" : meta.label} tone={meta.tone} />
       </div>
       <p className="mt-0.5 text-xs text-muted-foreground">{booking.vendorName}</p>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">

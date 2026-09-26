@@ -9,5 +9,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${site.url}/register`, lastModified: now, priority: 0.5 },
     { url: `${site.url}/privacy`, lastModified: now, priority: 0.3 },
     { url: `${site.url}/terms`, lastModified: now, priority: 0.3 },
+    { url: `${site.url}/delete-account`, lastModified: now, priority: 0.2 },
   ];
 }

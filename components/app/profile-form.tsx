@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,12 @@ type Props = {
   country: string;
 };
 
-export function ProfileForm({ fullName, phone, country }: Props) {
+export function ProfileForm(initial: Props) {
+  // Controlled: React clears uncontrolled fields after a server action, and Base UI warns when a
+  // default value changes underneath it (which is what happens when the saved profile reloads).
+  const [fullName, setFullName] = useState(initial.fullName);
+  const [phone, setPhone] = useState(initial.phone);
+  const [country, setCountry] = useState(initial.country);
   const [state, formAction, pending] = useActionState<ProfileState, FormData>(
     updateProfile,
     {},
@@ -36,7 +41,8 @@ export function ProfileForm({ fullName, phone, country }: Props) {
           <Input
             id="fullName"
             name="fullName"
-            defaultValue={fullName}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             required
             disabled={pending}
           />
@@ -47,7 +53,8 @@ export function ProfileForm({ fullName, phone, country }: Props) {
             id="phone"
             name="phone"
             type="tel"
-            defaultValue={phone}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             placeholder="+60…"
             disabled={pending}
           />
@@ -60,7 +67,8 @@ export function ProfileForm({ fullName, phone, country }: Props) {
           <Input
             id="country"
             name="country"
-            defaultValue={country}
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
             placeholder="e.g. Singapore"
             disabled={pending}
           />

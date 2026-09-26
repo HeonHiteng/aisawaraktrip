@@ -55,7 +55,7 @@ export function AuthForm({ mode, action, next }: Props) {
             : "Sign in to continue planning your trip."}
         </CardDescription>
         {DEMO_MODE && (
-          <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+          <p className="mt-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
             Demo mode — any button below takes you straight into the app with
             sample data.
           </p>

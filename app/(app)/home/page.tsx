@@ -126,8 +126,8 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {featured.map((e) => (
-            <ExperienceCard key={e.id} experience={e} />
+          {featured.map((e, i) => (
+            <ExperienceCard key={e.id} experience={e} priority={i === 0} />
           ))}
         </div>
       </section>

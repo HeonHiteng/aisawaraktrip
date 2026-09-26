@@ -4,33 +4,9 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : undefined;
 
-const isDev = process.env.NODE_ENV !== "production";
-
-/**
- * Content-Security-Policy. Kept deliberately simple for the MVP:
- * - scripts/styles from self ('unsafe-inline' for styles is required by
- *   Next's injected critical CSS; dev also needs 'unsafe-eval')
- * - images from self + https (Unsplash demo photos, Supabase Storage)
- * - connections to self + Supabase
- * Tighten with per-request nonces before a production launch.
- */
-const csp = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
-  `connect-src 'self'${supabaseHost ? ` https://${supabaseHost} wss://${supabaseHost}` : ""}${isDev ? " ws://localhost:* ws://*:*" : ""}`,
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-]
-  .join("; ")
-  .concat(isDev ? "" : "; upgrade-insecure-requests");
-
+// The Content-Security-Policy is per request (script nonces) and is set in proxy.ts / lib/csp.ts.
+// Only the static headers live here.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -45,6 +21,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // Dev only: let a phone / the Android app reach the dev server over the LAN.
   // e.g. ALLOWED_DEV_ORIGINS=192.168.1.20 in .env.local
   allowedDevOrigins: process.env.ALLOWED_DEV_ORIGINS?.split(",")

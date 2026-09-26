@@ -47,7 +47,7 @@ function StatTile({
       {delta != null ? (
         <p
           className={`mt-1 inline-flex items-center gap-0.5 text-xs font-medium ${
-            up ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+            up ? "text-emerald-700 dark:text-emerald-400" : "text-destructive"
           }`}
         >
           {up ? (

@@ -164,6 +164,27 @@ test("a guest can't get into the admin area", async ({ page }) => {
   await expect(page).not.toHaveURL(/\/admin/);
 });
 
+test("a guest can delete their own data (typed confirmation), and is signed out", async ({ page }) => {
+  await continueAsGuest(page);
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "Delete guest data" }).click();
+  // a stray tap is not enough: the word must be typed
+  await page.getByRole("button", { name: "Delete forever" }).click();
+  await page.getByLabel(/Type DELETE/).fill("nope");
+  await page.getByRole("button", { name: "Delete forever" }).click();
+  await expect(page.getByText("Type DELETE to confirm.")).toBeVisible();
+  await expect(page).toHaveURL(/\/profile/);
+  await page.getByLabel(/Type DELETE/).fill("DELETE");
+  await page.getByRole("button", { name: "Delete forever" }).click();
+  await page.waitForURL(/\/login\?deleted=1/, { timeout: 60_000 });
+  await expect(page.getByText("Your account and data have been deleted.")).toBeVisible();
+  await page.goto("/profile");
+  await expect(page).toHaveURL(/\/login/); // really signed out
+  // the public page Google Play links to
+  await page.goto("/delete-account");
+  await expect(page.getByRole("heading", { name: "Delete your account and data" })).toBeVisible();
+});
+
 test("admin: real email login, dashboard, catalogue CRUD, bookings, users", async ({ page }) => {
   // an admin account with a real email + password (created out-of-band, then promoted)
   const { data, error } = await svc.auth.admin.createUser({ email: adminEmail, password: adminPassword, email_confirm: true });

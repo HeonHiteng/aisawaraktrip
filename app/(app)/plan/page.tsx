@@ -3,6 +3,9 @@ import { TripForm } from "@/components/plan/trip-form";
 
 export const metadata: Metadata = { title: "Plan a trip" };
 
+// The AI planner call can take a while; the default serverless limit may be shorter (lib/ai/claude.ts).
+export const maxDuration = 60;
+
 function isoIn(days: number) {
   const d = new Date();
   d.setDate(d.getDate() + days);

@@ -9,7 +9,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 1 | Project setup & architecture | ✅ |
 | 2 | Database & authentication | ✅ live on Supabase (guest login verified; register/email-confirm needs the dashboard URL config) |
 | 3 | Explore (attractions / vendors / experiences) | ✅ live on Supabase (Mapbox pins still pending a token) |
-| 4 | AI Trip Planner | 🔨 (demo done; real Claude call pending API key) |
+| 4 | AI Trip Planner | ✅ Claude integration built & tested with a fake client (dormant until `ANTHROPIC_API_KEY`; live check: `npm run test:live`) |
 | 5 | Itinerary management | ✅ live on Supabase |
 | 6 | Booking system | ✅ live on Supabase (slot capacity enforced, 30-min holds) |
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
@@ -604,6 +604,17 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   a11y. Totals: unit+DB **265**, live **47**, demo E2E **9**, real E2E **4**.
 - ⚠️ Not verifiable here: the APK running the real app — the only emulator image ships WebView 83 (< 111 floor),
   so it shows the friendly "can't open" screen. Splash and icon were checked on it; try the APK on a real phone.
+
+## Claude planner (built, dormant until a key)
+
+- ✅ `lib/ai/brief.ts` (schema + `sanitizeBrief` + `applyBrief`), `lib/ai/claude.ts` (Sonnet brief, Haiku edit
+  interpreter, SDK `messages.parse` + zod output format), wired in `lib/ai/generate.ts`. The model returns only
+  catalogue slugs (enum + re-checked) and one short reason each; the builder does all scheduling and prices, so
+  it can't invent a place/price/time. Vetoes always win; a brief can't empty the catalogue; any error/timeout/no
+  key => the deterministic planner. Traveller notes go in as quoted data with an injection-resistant system prompt.
+- ✅ Refine: rules first; only if they can't map the request does Haiku rephrase it into a command the rules run.
+- ✅ 24 new unit tests (fake client) + a live test that skips without a key.
+- ⚠️ Not verified against the real API (no key here): run `npm run test:live` after adding one.
 
 ## Blocked / needs the founder
 

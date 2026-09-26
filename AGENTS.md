@@ -23,7 +23,7 @@ the catalogue and bookings.
   Use CSS tokens, never hard-coded hex. `bg-brand-gradient` = hero CTAs only;
   `bg-brand-hero` = dark headers/hero.
 - **Supabase** — Postgres + Auth + Storage + RLS (Phase 2+)
-- **Anthropic Claude API** — `claude-sonnet-5` planner, `claude-haiku-4-5` refine (Phase 4)
+- **Anthropic Claude API** — `claude-sonnet-5` planner brief, `claude-haiku-4-5` edit interpreter; optional (`ANTHROPIC_API_KEY`), the app works without it
 - **Mapbox GL** maps (Phase 3) · **Upstash** rate limiting · **Resend** email
 - Payments: `lib/payments/` provider interface + `mock` (in-app fake gateway) now →
   Stripe test → Billplz. `settlePayment` (`lib/domain/payments`) is the ONLY place a
@@ -62,10 +62,11 @@ the catalogue and bookings.
   `<form>` + a hidden input instead.
 - **Admin** reads/writes go through `lib/domain/admin.ts` (service-role in real mode).
   Admin booking status changes bypass the tourist-side transition guard by design.
-- **AI must never invent data.** `lib/ai/` retrieves candidate records from the DB,
-  constrains the model to them, and `validate.ts` rejects any ID/price not in the DB.
-  Today `lib/ai/itinerary.ts` is a deterministic builder over catalogue records;
-  the Claude call slots into `lib/ai/generate.ts` (`TODO(phase-4)`), same output shape.
+- **AI must never invent data.** Claude never writes the itinerary. `lib/ai/claude.ts` asks it for a small
+  *brief* (slugs to skip / rank first + a one-line reason each) constrained by a schema enum of real catalogue
+  slugs and re-checked by `lib/ai/brief.ts` `sanitizeBrief`; the deterministic `lib/ai/itinerary.ts` does ALL
+  scheduling and pricing from the DB. No key, an error or a timeout => the deterministic planner alone.
+  Traveller text goes to the model as quoted data. Check a key with `npm run test:live` (`tests/live/ai.live.test.ts`).
 - **Trips/bookings** flow through `lib/domain/{trips,bookings}` → in-memory
   `lib/demo/store.ts` in demo mode, Supabase otherwise. Booking prices are
   snapshotted server-side in `createBooking`, never from the client.

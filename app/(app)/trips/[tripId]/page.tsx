@@ -26,6 +26,9 @@ import {
   regenerateTrip,
 } from "@/app/(app)/trips/actions";
 
+// Refining / regenerating calls the AI planner, which can take a while (lib/ai/claude.ts).
+export const maxDuration = 60;
+
 export async function generateMetadata({
   params,
 }: PageProps<"/trips/[tripId]">): Promise<Metadata> {

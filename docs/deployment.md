@@ -56,7 +56,7 @@ Node is pinned to 22.x via `package.json` `engines`.
 | `NEXT_PUBLIC_DEMO_MODE` | to go live | set `false` once Supabase is configured (otherwise demo mode stays on) |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Phase 2 | Supabase → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Phase 2 | **server-only**; used by webhooks / admin / seeding |
-| `ANTHROPIC_API_KEY` | Phase 4 | enables the real Claude planner (falls back to the deterministic builder without it) |
+| `ANTHROPIC_API_KEY` | Phase 4 | enables the Claude planner (falls back to the deterministic builder without it or on any error) — see *Turning on the Claude planner* below |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Phase 3 | map pins on detail pages |
 | `PAYMENT_PROVIDER` | Phase 7 | `mock` (default) → `stripe` → `billplz` |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Phase 7 | test mode first |
@@ -105,3 +105,21 @@ then, keep `PAYMENT_PROVIDER=mock` or use Stripe **test mode**.
 - Register the business (SSM) and add a real PDPA data-protection contact.
 - Confirm whether reselling tours needs a MOTAC travel-agency licence for your
   commission model.
+
+## Turning on the Claude planner
+
+The app already ships the integration; it stays dormant until a key is set, and every plan still
+comes from your catalogue (Claude only chooses what to skip/rank first and writes a one-line reason).
+
+1. Create a key at console.anthropic.com → API keys (needs a payment method). **Set a monthly spend
+   limit** there first. Rough cost: one plan is ~3k tokens in / ~0.5k out on Sonnet — a couple of US cents;
+   an edit that the rules can't handle costs a fraction of a cent (Haiku). Each user is already limited
+   to 8 plans and 20 edits a minute (`lib/rate-limit.ts`).
+2. Local check: put `ANTHROPIC_API_KEY=…` in `.env.local` and run `npm run test:live` — the
+   "Claude planner (live API)" tests print the brief and fail loudly if the API shape or model id is wrong.
+3. Production: add `ANTHROPIC_API_KEY` in Vercel → Settings → Environment Variables (Production) and redeploy.
+   Optional: `AI_PLANNER_MODEL` / `AI_REFINE_MODEL` to switch models without a code change.
+4. Watch Vercel logs for `[ai] … failed; using the rule-based planner` — that line means users are getting
+   the fallback (bad key, quota, outage, timeout), which is safe but not personalised.
+5. Privacy: trip inputs (dates, budget, interests, notes) go to Anthropic. The privacy policy already says
+   so; declare it in Play's Data safety form (docs/play-store.md).

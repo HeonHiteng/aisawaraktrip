@@ -27,6 +27,7 @@
     "gen:types": "supabase gen types typescript --linked --schema public > types/database.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@base-ui/react": "^1.7.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",

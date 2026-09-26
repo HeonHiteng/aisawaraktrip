@@ -17,6 +17,13 @@ import { parseTripPrompt } from "@/lib/plan/parse-prompt";
 export interface Candidates {
   experiences: Experience[];
   attractions: Attraction[];
+  /**
+   * From the AI brief (lib/ai/brief.ts), all optional and already validated against the
+   * catalogue: slugs to rank first (best first), and short personalised reasons by slug.
+   * They only steer ranking and wording — scheduling and prices stay in this file.
+   */
+  prefer?: string[];
+  reasons?: Record<string, string>;
 }
 
 const CAT_LABEL: Record<CategorySlug, string> = {
@@ -171,6 +178,7 @@ function expItem(
   e: Experience,
   fallbackStart: string,
   trip: TripInput,
+  reasons?: Record<string, string>,
 ): ItineraryItem {
   const start = expStartTime(e, fallbackStart);
   return {
@@ -181,7 +189,7 @@ function expItem(
     durationMinutes: e.durationMinutes,
     title: e.title,
     description: e.summary ?? e.description ?? "",
-    whyRecommended: why(e.slug, e.categories, trip.interests),
+    whyRecommended: reasons?.[e.slug] ?? why(e.slug, e.categories, trip.interests),
     estimatedCost: e.pricePerPerson * pax(trip),
     locationLabel: e.location?.name ?? "Sarawak",
     attractionSlug: null,
@@ -195,6 +203,7 @@ function attItem(
   a: Attraction,
   start: string,
   trip: TripInput,
+  reasons?: Record<string, string>,
 ): ItineraryItem {
   const unit = a.isFree ? 0 : a.priceMin;
   return {
@@ -205,7 +214,7 @@ function attItem(
     durationMinutes: a.avgVisitMinutes,
     title: a.name,
     description: a.summary ?? a.description ?? "",
-    whyRecommended: why(a.slug, a.categories, trip.interests),
+    whyRecommended: reasons?.[a.slug] ?? why(a.slug, a.categories, trip.interests),
     estimatedCost: unit * pax(trip),
     locationLabel: a.location?.name ?? "Sarawak",
     attractionSlug: a.slug,
@@ -317,6 +326,13 @@ export function buildItinerary(
       ? pool.filter((x) => matched(x.categories, trip.interests).length > 0)
       : pool;
 
+  // AI-preferred picks rank above everything else, in the order the brief gave them.
+  const prefer = candidates.prefer ?? [];
+  const bonus = (slug: string) => {
+    const i = prefer.indexOf(slug);
+    return i === -1 ? 0 : 100 - i;
+  };
+
   const expScoped = byInterest([...candidates.experiences]);
   const attScoped = byInterest([...candidates.attractions]);
 
@@ -324,10 +340,10 @@ export function buildItinerary(
   // anything the traveller vetoed (no fallback past a veto).
   const expPool = (expScoped.length ? expScoped : [...candidates.experiences])
     .filter((e) => wanted(e.slug, e.categories))
-    .sort((a, b) => scoreExp(b, trip.interests) - scoreExp(a, trip.interests));
+    .sort((a, b) => scoreExp(b, trip.interests) + bonus(b.slug) - (scoreExp(a, trip.interests) + bonus(a.slug)));
   const attPool = (attScoped.length ? attScoped : [...candidates.attractions])
     .filter((a) => wanted(a.slug, a.categories))
-    .sort((a, b) => scoreAtt(b, trip.interests) - scoreAtt(a, trip.interests));
+    .sort((a, b) => scoreAtt(b, trip.interests) + bonus(b.slug) - (scoreAtt(a, trip.interests) + bonus(a.slug)));
 
   // The full set minus vetoes — used for arrival/departure filler where any
   // sensible stop will do, even if it doesn't match a stated interest.
@@ -372,13 +388,13 @@ export function buildItinerary(
 
     const addAtt = (a: Attraction, start: string) => {
       usedAtt.add(a.slug);
-      const it = attItem(a, start, trip);
+      const it = attItem(a, start, trip, candidates.reasons);
       items.push(it);
       occupied.push([it.startTime, it.endTime]);
     };
     const addExp = (e: Experience, fallbackStart: string) => {
       usedExp.add(e.id);
-      const it = expItem(e, fallbackStart, trip);
+      const it = expItem(e, fallbackStart, trip, candidates.reasons);
       items.push(it);
       occupied.push([it.startTime, it.endTime]);
       usedExps++;
@@ -659,6 +675,8 @@ export function buildItinerary(
 export interface RefineResult {
   itinerary: Itinerary;
   note: string;
+  /** False when the instruction couldn't be mapped to any change. */
+  changed: boolean;
 }
 
 function targetDays(instruction: string, total: number): number[] {
@@ -837,7 +855,8 @@ export function applyRefinement(
     };
   });
 
-  if (!notes.length) {
+  const changed = notes.length > 0;
+  if (!changed) {
     notes.push(
       "I couldn't map that to a change — try “make day 2 cheaper”, “more food”, or “no outdoor activities tomorrow”.",
     );
@@ -852,6 +871,7 @@ export function applyRefinement(
       createdAt: new Date().toISOString(),
     },
     note: notes.join(" "),
+    changed,
   };
 }
 

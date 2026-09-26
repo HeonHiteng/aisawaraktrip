@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { requireUser } from "@/lib/auth";
 import { getBooking } from "@/lib/domain/bookings";
+import { HOLD_MINUTES } from "@/lib/booking-hold";
 import { formatDate, formatMYR } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Checkout" };
@@ -52,6 +53,12 @@ export default async function CheckoutPage({
           </div>
         </dl>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        Your seats are held for {HOLD_MINUTES} minutes. If you need longer,
+        just come back to this page — we&apos;ll re-check the time is still
+        free.
+      </p>
 
       <CheckoutForm bookingId={bookingId} />
     </div>

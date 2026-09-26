@@ -33,6 +33,8 @@ export interface Booking extends BookingInput {
   currency: string;
   status: BookingStatus;
   createdAt: string;
+  /** Pending bookings hold their seats until this time (see lib/booking-hold). */
+  holdExpiresAt?: string | null;
 }
 
 export const SERVICE_FEE_RATE = 0.06;

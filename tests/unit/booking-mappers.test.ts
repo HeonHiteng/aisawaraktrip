@@ -90,6 +90,7 @@ const dbRow = (over: Partial<Tables<"bookings">> = {}): Tables<"bookings"> => ({
   experience_slug: "food-walk",
   vendor_name: "KFW",
   location_name: null,
+  hold_expires_at: null,
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
   ...over,

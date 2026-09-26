@@ -191,6 +191,7 @@ export type Database = {
           experience_id: string
           experience_slug: string
           experience_title: string
+          hold_expires_at: string | null
           id: string
           itinerary_item_id: string | null
           location_name: string | null
@@ -220,6 +221,7 @@ export type Database = {
           experience_id: string
           experience_slug: string
           experience_title: string
+          hold_expires_at?: string | null
           id?: string
           itinerary_item_id?: string | null
           location_name?: string | null
@@ -249,6 +251,7 @@ export type Database = {
           experience_id?: string
           experience_slug?: string
           experience_title?: string
+          hold_expires_at?: string | null
           id?: string
           itinerary_item_id?: string | null
           location_name?: string | null
@@ -1006,11 +1009,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_booking: {
+        Args: { p: Json; p_hold_minutes?: number }
+        Returns: string
+      }
       create_trip: { Args: { p_itinerary: Json; p_trip: Json }; Returns: string }
+      extend_booking_hold: {
+        Args: { p_booking: string; p_minutes?: number; p_user: string }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
       save_itinerary: {
         Args: { p_itinerary: Json; p_trip_id: string }
         Returns: string
+      }
+      slot_taken: {
+        Args: {
+          p_date: string
+          p_exclude?: string
+          p_experience: string
+          p_time: string
+        }
+        Returns: number
       }
       settle_payment: {
         Args: {

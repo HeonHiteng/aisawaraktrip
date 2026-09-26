@@ -11,7 +11,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 3 | Explore (attractions / vendors / experiences) | ✅ live on Supabase (Mapbox pins still pending a token) |
 | 4 | AI Trip Planner | 🔨 (demo done; real Claude call pending API key) |
 | 5 | Itinerary management | ✅ live on Supabase |
-| 6 | Booking system | ✅ live on Supabase (slot capacity not enforced yet) |
+| 6 | Booking system | ✅ live on Supabase (slot capacity enforced, 30-min holds) |
 | 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
 | 8 | Admin dashboard | ✅ live on Supabase (admin's own session + RLS) |
 | 9 | Testing & security | 🔨 (tests + headers + rate limiting done; Sentry optional) |
@@ -536,6 +536,28 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   `/terms` — needed for PDPA and the Play Store) stay, with a slimmed header ("Open app") and
   Privacy / Terms links under the sign-in card. +2 E2E tests (root redirects both ways; legal pages
   reachable from sign-in). The Android app opens straight to sign-in for the same reason.
+
+## Slot capacity (no overbooking)
+
+- ✅ **A slot = experience + date + start time; its size = `capacity_per_slot`** (unset/0 = unlimited,
+  as before). Migration `20260927100001`: `create_booking()` locks the experience row, counts the
+  slot's taken seats and inserts or refuses in ONE transaction — so two people can't both take the
+  last seat. Confirmed/completed bookings and **unexpired unpaid holds** take seats; cancelled,
+  refunded and lapsed ones don't. Unpaid bookings hold their seats **30 minutes**
+  (`lib/booking-hold.ts`); no clean-up job — expired holds are simply not counted.
+- ✅ **Checkout renews the hold** (`extend_booking_hold`) if seats remain, else "that time filled up".
+  **Paying after the hold lapsed AND the slot filled:** the booking is cancelled (never overbooked),
+  the payment stays `paid` and is logged "refund needed" (`settle_payment` updated; consistent
+  lock order experience → booking, so the functions can't deadlock). All four functions are
+  service-role only.
+- ✅ Friendly messages: "Only 2 seats left for that time…" / "fully booked". Demo mode mirrors the
+  same rules (`demoSlotLeft`).
+- **Verified:** 17 SQL tests (exact fill, refusal + seats left, independent slots, unlimited, which
+  statuses hold seats, expiry, renewal, late payment ×3, permissions), 8 demo unit tests, and 5 live
+  tests on the real DB — including **six people booking the last seats at the same instant: exactly
+  four get one, never more than capacity**.
+- ⏭️ Not done: stale unpaid bookings still *display* "Awaiting payment" after their hold lapses (they
+  no longer block anyone); a small "expired" label / daily cleanup would tidy the lists.
 
 ## Blocked / needs the founder
 

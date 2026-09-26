@@ -1,13 +1,15 @@
 import "server-only";
 import { DEMO_MODE } from "@/lib/demo/mode";
-import { demoStoreFor } from "@/lib/demo/store";
+import { allDemoBookings, demoStoreFor } from "@/lib/demo/store";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getExperienceById } from "@/lib/domain/catalogue";
 import { getTrip } from "@/lib/domain/trips";
 import { isUuid } from "@/lib/domain/mappers/catalogue";
 import { bookingFromRow, bookingToInsert } from "@/lib/domain/mappers/bookings";
+import { HOLD_MINUTES, holdUntil, slotFullMessage } from "@/lib/booking-hold";
 import { weekdayKey } from "@/lib/format";
+import type { Json } from "@/types/database";
 import {
   priceBooking,
   type Booking,
@@ -38,6 +40,37 @@ const DAY_NAME: Record<string, string> = {
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+/**
+ * Demo mode: seats left in a slot, or null when the experience has no capacity set.
+ * Mirrors `slot_taken()` in SQL: confirmed/completed bookings and unexpired pending
+ * holds take seats; cancelled, refunded and lapsed ones don't.
+ */
+export function demoSlotLeft(
+  capacity: number,
+  experienceId: string,
+  date: string,
+  time: string,
+  excludeId?: string,
+): number | null {
+  if (!(capacity > 0)) return null;
+  const now = Date.now();
+  const taken = allDemoBookings()
+    .filter(
+      (b) =>
+        b.experienceId === experienceId &&
+        b.bookingDate === date &&
+        b.startTime === time &&
+        b.id !== excludeId &&
+        (b.status === "confirmed" ||
+          b.status === "completed" ||
+          (b.status === "pending" &&
+            !!b.holdExpiresAt &&
+            new Date(b.holdExpiresAt).getTime() > now)),
+    )
+    .reduce((n, b) => n + b.numPax, 0);
+  return Math.max(0, capacity - taken);
 }
 
 export async function listBookings(userId: string): Promise<Booking[]> {
@@ -137,6 +170,14 @@ export async function createBooking(
   );
 
   if (DEMO_MODE) {
+    const left = demoSlotLeft(
+      experience.availability.capacityPerSlot,
+      experience.id,
+      input.bookingDate,
+      input.startTime,
+    );
+    if (left !== null && numPax > left) return { error: slotFullMessage(left) };
+
     const booking: Booking = {
       ...input,
       tripId,
@@ -154,33 +195,46 @@ export async function createBooking(
       currency: experience.currency,
       status: "pending",
       createdAt: new Date().toISOString(),
+      holdExpiresAt: holdUntil(),
     };
     demoStoreFor(userId).bookings.unshift(booking);
     return booking;
   }
 
-  const { data, error } = await createAdminClient()
+  // One transaction in the database: lock the experience, count the slot's taken seats,
+  // insert or refuse — so two people can't both take the last seat. It also starts the
+  // unpaid-hold clock. Price/identity are still ours, computed above.
+  const svc = createAdminClient();
+  const { data: id, error } = await svc.rpc("create_booking", {
+    p: bookingToInsert(
+      userId,
+      { ...input, tripId },
+      {
+        experienceTitle: experience.title,
+        experienceSlug: experience.slug,
+        vendorName: experience.vendor.name,
+        locationName: experience.location?.name ?? null,
+        unitPrice: experience.pricePerPerson,
+        subtotal,
+        serviceFee,
+        totalAmount,
+        currency: experience.currency,
+      },
+    ) as unknown as Json,
+    p_hold_minutes: HOLD_MINUTES,
+  });
+  if (error) {
+    if (error.message === "slot_full") {
+      return { error: slotFullMessage(Number(error.details) || 0) };
+    }
+    throw new Error(`create booking: ${error.message}`);
+  }
+  const { data, error: readError } = await svc
     .from("bookings")
-    .insert(
-      bookingToInsert(
-        userId,
-        { ...input, tripId },
-        {
-          experienceTitle: experience.title,
-          experienceSlug: experience.slug,
-          vendorName: experience.vendor.name,
-          locationName: experience.location?.name ?? null,
-          unitPrice: experience.pricePerPerson,
-          subtotal,
-          serviceFee,
-          totalAmount,
-          currency: experience.currency,
-        },
-      ),
-    )
     .select("*")
+    .eq("id", id)
     .single();
-  if (error) throw new Error(`create booking: ${error.message}`);
+  if (readError) throw new Error(`create booking: ${readError.message}`);
   return bookingFromRow(data);
 }
 

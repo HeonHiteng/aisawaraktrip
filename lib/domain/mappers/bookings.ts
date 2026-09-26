@@ -40,6 +40,7 @@ export function bookingFromRow(r: Tables<"bookings">): Booking {
     currency: r.currency,
     status: r.status,
     createdAt: r.created_at,
+    holdExpiresAt: r.hold_expires_at,
   };
 }
 

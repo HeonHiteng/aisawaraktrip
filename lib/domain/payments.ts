@@ -3,7 +3,9 @@ import { DEMO_MODE } from "@/lib/demo/mode";
 import { demoStoreFor } from "@/lib/demo/store";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getBooking, setBookingStatus } from "@/lib/domain/bookings";
+import { demoSlotLeft, getBooking, setBookingStatus } from "@/lib/domain/bookings";
+import { getExperienceById } from "@/lib/domain/catalogue";
+import { HOLD_MINUTES, SLOT_FULL_AT_CHECKOUT, holdUntil } from "@/lib/booking-hold";
 import { setTripStatus } from "@/lib/domain/trips";
 import { isUuid } from "@/lib/domain/mappers/catalogue";
 import {
@@ -60,6 +62,38 @@ export async function startPayment(
   if (!booking) return { error: "Booking not found." };
   if (booking.status !== "pending") {
     return { error: "This booking isn't awaiting payment." };
+  }
+
+  // Checkout renews the seat hold — or says so if the time filled up in the meantime.
+  if (DEMO_MODE) {
+    const exp = await getExperienceById(booking.experienceId);
+    const left = exp
+      ? demoSlotLeft(
+          exp.availability.capacityPerSlot,
+          exp.id,
+          booking.bookingDate,
+          booking.startTime,
+          booking.id,
+        )
+      : null;
+    if (left !== null && booking.numPax > left) {
+      return { error: SLOT_FULL_AT_CHECKOUT };
+    }
+    const mine = demoStoreFor(userId).bookings.find((b) => b.id === bookingId);
+    if (mine) mine.holdExpiresAt = holdUntil();
+  } else {
+    const { error } = await createAdminClient().rpc("extend_booking_hold", {
+      p_booking: bookingId,
+      p_user: userId,
+      p_minutes: HOLD_MINUTES,
+    });
+    if (error) {
+      if (error.message === "slot_full") return { error: SLOT_FULL_AT_CHECKOUT };
+      if (error.message === "booking_not_pending") {
+        return { error: "This booking isn't awaiting payment." };
+      }
+      throw new Error(`extend hold: ${error.message}`);
+    }
   }
 
   const provider = getPaymentProvider();
@@ -209,6 +243,34 @@ async function settleDemo(
     payment.paidAt = settledStatus === "paid" ? new Date().toISOString() : null;
 
     if (settledStatus === "paid") {
+      // Same rule as the SQL: if the hold lapsed and the slot filled up meanwhile, never
+      // overbook — cancel the booking; the payment stays `paid` and is flagged for refund.
+      const held = store.bookings.find((b) => b.id === payment.bookingId);
+      if (
+        held?.status === "pending" &&
+        held.holdExpiresAt &&
+        new Date(held.holdExpiresAt).getTime() <= Date.now()
+      ) {
+        const exp = await getExperienceById(held.experienceId);
+        const left = exp
+          ? demoSlotLeft(
+              exp.availability.capacityPerSlot,
+              exp.id,
+              held.bookingDate,
+              held.startTime,
+              held.id,
+            )
+          : null;
+        if (left !== null && held.numPax > left) {
+          held.status = "cancelled";
+          console.error(
+            "[payments] PAID BUT BOOKING NOT CONFIRMABLE — refund needed",
+            { bookingId: held.id, bookingStatus: held.status },
+          );
+          return { status: "paid" };
+        }
+      }
+      if (held) held.holdExpiresAt = null;
       await setBookingStatus(userId, payment.bookingId, "confirmed");
       const booking = await getBooking(userId, payment.bookingId);
       if (booking) {

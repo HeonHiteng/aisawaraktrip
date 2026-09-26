@@ -54,13 +54,17 @@ let bob: Awaited<ReturnType<typeof guest>>;
 const as = (u: typeof alice) => (state.current = u.client);
 
 let expId: string;
-let bookingDate: string;
+// Valid run days spread over the next weeks. Each booking takes the NEXT one, so the whole file
+// never piles onto one slot (the food walk seats 10 per slot — capacity is enforced now).
+const runDates: string[] = [];
+let dateCursor = 0;
+const nextDate = () => runDates[dateCursor++ % runDates.length];
 let startTime: string;
 
 const input = (over: Partial<BookingInput> = {}): BookingInput => ({
   experienceId: expId,
   tripId: null,
-  bookingDate,
+  bookingDate: nextDate(),
   startTime,
   numAdults: 2,
   numChildren: 0,
@@ -105,14 +109,11 @@ beforeAll(async () => {
   const exp = (await getExperience("kuching-heritage-street-food-walk"))!;
   expId = exp.id;
   startTime = exp.availability.times[0];
-  for (let i = 30; i < 44; i++) {
+  for (let i = 30; i < 70; i++) {
     const d = new Date(Date.now() + i * 86_400_000).toISOString().slice(0, 10);
-    if (exp.availability.days.includes(weekdayKey(d))) {
-      bookingDate = d;
-      break;
-    }
+    if (exp.availability.days.includes(weekdayKey(d))) runDates.push(d);
   }
-  expect(bookingDate).toBeTruthy();
+  expect(runDates.length).toBeGreaterThan(10);
 });
 
 afterAll(async () => {

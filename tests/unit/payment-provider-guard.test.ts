@@ -29,7 +29,9 @@ const REAL_DB = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "k",
 };
 
-describe("mock payment provider guard", () => {
+// Each case re-imports the payment modules from cold (vi.resetModules), which is fast alone
+// (~1s) but can exceed the 5s default when the whole suite is transforming in parallel.
+describe("mock payment provider guard", { timeout: 30_000 }, () => {
   it("refuses to run in production against a real database", async () => {
     await expect(provider({ ...REAL_DB, NODE_ENV: "production", PAYMENT_PROVIDER: "mock" })).rejects.toThrow(/not allowed in production/);
     await expect(provider({ ...REAL_DB, NODE_ENV: "production", PAYMENT_PROVIDER: "" })).rejects.toThrow(/not allowed in production/);

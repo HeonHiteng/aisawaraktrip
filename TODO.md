@@ -12,7 +12,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 | 4 | AI Trip Planner | ✅ Claude integration built & tested with a fake client (dormant until `ANTHROPIC_API_KEY`; live check: `npm run test:live`) |
 | 5 | Itinerary management | ✅ live on Supabase |
 | 6 | Booking system | ✅ live on Supabase (slot capacity enforced, 30-min holds) |
-| 7 | Payment integration | 🔨 (mock provider working; Stripe/Billplz + webhook pending) |
+| 7 | Payment integration | ✅ Stripe built & tested (dormant until keys; Billplz not started); mock still the default |
 | 8 | Admin dashboard | ✅ live on Supabase (admin's own session + RLS; needs-attention panel, photo upload) |
 | 9 | Testing & security | 🔨 (tests, nonce CSP, rate limiting, a11y scan done; Sentry optional) |
 | 10 | Deployment | ✅ staging live: https://sarawak-trip-planner.vercel.app (auto-deploys from `main`) |
@@ -634,6 +634,18 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - 🐛 Fixed: two quick taps on Explore filters could overwrite each other.
 - ⏭️ Not done (needs a decision or money): multi-city planning (Miri/Sibu/Bintulu trips), halal / vegetarian info per eatery,
   opening hours, photos for eateries, a "Google Maps link" inside the itinerary item (needs a DB column).
+
+## Stripe payments (built, dormant until keys)
+
+- ✅ `lib/payments/stripe.ts`: hosted Checkout Session for exactly the server-side amount (sen, MYR), card / FPX /
+  GrabPay; webhook + return-URL verification; async methods (pending -> paid/failed); expired -> cancelled.
+- ✅ `/api/payments/webhook`: raw-body signature check (400 on forged/tampered/stale), unrelated events 200-ignored,
+  real failures 500 so Stripe retries. Result page settles on return by re-fetching the session from Stripe.
+- ✅ Gateway failure => a friendly message, booking untouched (was a crash). Android shell allows `*.stripe.com`.
+- ✅ Tests: 15 unit (fake API + REAL signature checks) and 8 live (webhook -> real DB: confirms once, replay is a no-op,
+  forged/tampered/wrong-amount/unknown confirm nothing, pending -> paid, paid can't be un-paid).
+- ⚠️ Not exercised against Stripe's real servers (no keys here): after adding test keys, book + pay with 4242… once.
+- ⏭️ Refunds stay manual (Stripe dashboard, then mark the booking Refunded). FPX/GrabPay need a Malaysian Stripe account.
 
 ## Blocked / needs the founder
 

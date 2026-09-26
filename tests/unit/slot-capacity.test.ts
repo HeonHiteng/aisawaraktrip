@@ -1,3 +1,4 @@
+import { weekdayKey } from "@/lib/format";
 import { describe, expect, it, vi } from "vitest";
 import { createBooking, getBooking, setBookingStatus } from "@/lib/domain/bookings";
 import { settlePayment, startPayment } from "@/lib/domain/payments";
@@ -162,5 +163,37 @@ describe("isHoldLapsed", () => {
     expect(isHoldLapsed({ status: "pending", holdExpiresAt: null }, now)).toBe(false);
     expect(isHoldLapsed({ status: "confirmed", holdExpiresAt: "2026-09-26T11:00:00Z" }, now)).toBe(false);
     expect(isHoldLapsed({ status: "cancelled", holdExpiresAt: "2026-09-26T11:00:00Z" }, now)).toBe(false);
+  });
+});
+
+// ---- gateway failure ----
+import * as paymentsIndex from "@/lib/payments";
+describe("startPayment when the gateway fails", () => {
+  it("returns a message (no crash) and leaves the booking pending", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const spy = vi.spyOn(paymentsIndex, "getPaymentProvider").mockReturnValue({
+      name: "stripe",
+      createSession: async () => {
+        throw new Error("The payment method type provided: fpx is invalid");
+      },
+      verify: async () => {
+        throw new Error("unused");
+      },
+    });
+    try {
+      const user = `gw-${Math.random().toString(36).slice(2, 8)}`;
+      const exp = (await import("@/lib/demo/fixtures")).demoExperiences[0];
+      const day = Array.from({ length: 14 }, (_, i) => new Date(Date.now() + (i + 20) * 86_400_000).toISOString().slice(0, 10)).find((d) => exp.availability.days.includes(weekdayKey(d)))!;
+      const b = await createBooking(user, {
+        experienceId: exp.id, tripId: null, bookingDate: day, startTime: exp.availability.times[0],
+        numAdults: exp.minPax, numChildren: 0, customerName: "GW", customerEmail: "gw@example.test", customerPhone: null, specialRequests: null,
+      });
+      if ("error" in b) throw new Error(b.error);
+      const r = await startPayment(user, b.id, "fpx");
+      expect(r).toMatchObject({ error: expect.stringMatching(/couldn't open the payment page/) });
+      expect((await getBooking(user, b.id))?.status).toBe("pending");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

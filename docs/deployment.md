@@ -123,3 +123,33 @@ comes from your catalogue (Claude only chooses what to skip/rank first and write
    the fallback (bad key, quota, outage, timeout), which is safe but not personalised.
 5. Privacy: trip inputs (dates, budget, interests, notes) go to Anthropic. The privacy policy already says
    so; declare it in Play's Data safety form (docs/play-store.md).
+
+## Turning on real payments (Stripe)
+
+The integration is built and tested (hosted Checkout, signature-verified webhook, idempotent
+settlement); it stays dormant while `PAYMENT_PROVIDER=mock`. Stripe **test mode is free** and needs no
+business registration — do this first to try the whole flow with fake cards.
+
+1. Create a Stripe account (stripe.com). Stay in **Test mode** (toggle top right).
+2. Developers → API keys → copy the **Secret key** (`sk_test_…`).
+3. Developers → Webhooks → **Add endpoint**: URL `https://<your-domain>/api/payments/webhook`, events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed`, `checkout.session.expired`. Copy its **Signing secret** (`whsec_…`).
+4. Vercel → Settings → Environment Variables (Production): `PAYMENT_PROVIDER=stripe`,
+   `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; **remove** `ALLOW_MOCK_PAYMENTS`. Redeploy.
+5. Book something and pay with test card `4242 4242 4242 4242` (any future date, any CVC). The booking
+   should turn Confirmed and the Stripe dashboard should show the payment.
+   Locally: `stripe listen --forward-to localhost:3000/api/payments/webhook` (Stripe CLI) prints a
+   `whsec_…` for `.env.local`.
+
+Notes
+- **Card works on any Stripe account. FPX and GrabPay need a Malaysian Stripe account** (business
+  registration). Until then, only offer card, or the FPX/GrabPay buttons will show "We couldn't open
+  the payment page" (the booking is safe and still held).
+- The amount charged is always the server-side booking total, in sen. Confirmation only ever comes from a
+  verified webhook or from re-fetching the session from Stripe when the traveller returns — never from
+  the URL.
+- **Refunds are manual**: a booking cancelled after payment appears in Admin → Overview → *Needs attention*;
+  refund it in Stripe (Payments → the payment → Refund), then mark the booking **Refunded**.
+- Going live = swap the test keys for live keys (and the live webhook secret); no code change.
+

@@ -97,15 +97,23 @@ export async function startPayment(
   }
 
   const provider = getPaymentProvider();
-  const session = await provider.createSession({
-    bookingId,
-    amount: booking.totalAmount, // server-side amount, never from the client
-    currency: booking.currency,
-    method,
-    customerEmail: booking.customerEmail,
-    customerName: booking.customerName,
-    returnUrl: `/checkout/${bookingId}/result`,
-  });
+  let session;
+  try {
+    session = await provider.createSession({
+      bookingId,
+      amount: booking.totalAmount, // server-side amount, never from the client
+      currency: booking.currency,
+      method,
+      customerEmail: booking.customerEmail,
+      customerName: booking.customerName,
+      returnUrl: `/checkout/${bookingId}/result`,
+    });
+  } catch (e) {
+    // The gateway refused or was unreachable (e.g. a method the account doesn't offer). The booking
+    // is untouched and still held, so the traveller can retry or pick another method.
+    console.error("[payments] could not open a payment session", provider.name, method, e);
+    return { error: "We couldn't open the payment page. Please try again or choose another payment method." };
+  }
 
   if (DEMO_MODE) {
     const payment: Payment = {

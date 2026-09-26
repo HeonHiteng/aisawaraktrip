@@ -25,10 +25,10 @@ the catalogue and bookings.
 - **Supabase** — Postgres + Auth + Storage + RLS (Phase 2+)
 - **Anthropic Claude API** — `claude-sonnet-5` planner brief, `claude-haiku-4-5` edit interpreter; optional (`ANTHROPIC_API_KEY`), the app works without it
 - **Mapbox GL** maps (Phase 3) · **Upstash** rate limiting · **Resend** email
-- Payments: `lib/payments/` provider interface + `mock` (in-app fake gateway) now →
-  Stripe test → Billplz. `settlePayment` (`lib/domain/payments`) is the ONLY place a
-  booking flips to `confirmed`; real mode does it in `/api/payments/webhook` after
-  signature verification. Amounts are snapshotted server-side, never from the client.
+- Payments: `lib/payments/` provider interface — `mock` (in-app fake gateway, default) and `stripe` (hosted
+  Checkout + signature-verified webhook at `/api/payments/webhook`, docs/deployment.md) → Billplz later.
+  `settlePayment` (`lib/domain/payments`) is the ONLY place a booking flips to `confirmed`, from a verified
+  webhook or from re-fetching the Stripe session on return. Amounts are snapshotted server-side, never from the client.
 - Hosting: **Vercel**
 - **Android APK**: Capacitor shell (`capacitor.config.ts`, `android/`) that loads the
   hosted/LAN app in a WebView — see `docs/android.md`. Not a native rewrite.

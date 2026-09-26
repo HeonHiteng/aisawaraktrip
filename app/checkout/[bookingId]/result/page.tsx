@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, PartyPopper, XCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
 import { getBooking, bookingsForTrip } from "@/lib/domain/bookings";
-import { getPaymentForBooking } from "@/lib/domain/payments";
+import { getPaymentForBooking, settlePayment } from "@/lib/domain/payments";
 import { getTrip } from "@/lib/domain/trips";
 import { formatDate, formatMYR } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -15,9 +15,24 @@ export const metadata: Metadata = { title: "Payment result" };
 
 export default async function PaymentResultPage({
   params,
+  searchParams,
 }: PageProps<"/checkout/[bookingId]/result">) {
   const { bookingId } = await params;
+  const sp = await searchParams;
   const user = await requireUser();
+
+  // Coming back from Stripe Checkout: ask Stripe (with our secret key) what really happened, so the
+  // traveller sees "confirmed" straight away instead of waiting for the webhook. Idempotent; the
+  // webhook may well have settled it already. A random ?session_id can't claim anything: it is
+  // re-fetched from Stripe and only ever settles the signed-in traveller's own payment.
+  const sessionId = typeof sp.session_id === "string" ? sp.session_id : null;
+  if (sessionId && /^cs_[A-Za-z0-9_]+$/.test(sessionId)) {
+    try {
+      await settlePayment(user.id, { session_id: sessionId });
+    } catch (e) {
+      console.error("[payments] settling on return failed", bookingId, e);
+    }
+  }
   const [booking, payment] = await Promise.all([
     getBooking(user.id, bookingId),
     getPaymentForBooking(user.id, bookingId),

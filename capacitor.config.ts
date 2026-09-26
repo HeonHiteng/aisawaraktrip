@@ -28,6 +28,8 @@ const config: CapacitorConfig = {
     cleartext: url.startsWith("http://"),
     // Shown when the server can't be reached (no network, dev server off).
     errorPath: "offline.html",
+    // Stripe Checkout (card / GrabPay) should open inside the app rather than bounce out to the browser.
+    allowNavigation: ["checkout.stripe.com", "*.stripe.com"],
   },
   android: {
     // Never let the WebView be debugged from a release build.

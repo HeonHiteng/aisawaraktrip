@@ -106,6 +106,24 @@ describe("who may call the admin functions", () => {
   });
 });
 
+describe("photo buckets", () => {
+  it("the catalogue bucket only takes JPG/PNG/WebP up to 5 MB (no SVG: it can carry script)", async () => {
+    const r = (await db.query<{ file_size_limit: string; allowed_mime_types: string[] }>(
+      `select file_size_limit, allowed_mime_types from storage.buckets where id = 'catalogue'`,
+    )).rows[0];
+    expect(Number(r.file_size_limit)).toBe(5 * 1024 * 1024);
+    expect([...r.allowed_mime_types].sort()).toEqual(["image/jpeg", "image/png", "image/webp"]);
+  });
+
+  it("the avatars bucket is limited too", async () => {
+    const r = (await db.query<{ file_size_limit: string; allowed_mime_types: string[] }>(
+      `select file_size_limit, allowed_mime_types from storage.buckets where id = 'avatars'`,
+    )).rows[0];
+    expect(Number(r.file_size_limit)).toBe(2 * 1024 * 1024);
+    expect(r.allowed_mime_types).not.toContain("image/svg+xml");
+  });
+});
+
 describe("admin_save_experience", () => {
   it("creates the row, category links and ordered photos in one go, owned by the admin", async () => {
     const id = await saveExp(ADMIN(), exp());

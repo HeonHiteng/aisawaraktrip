@@ -37,7 +37,17 @@ test.afterAll(async () => {
     }
   }
   await svc.from("experiences").delete().ilike("title", "E2E Real Tour%");
+  // photos uploaded by the admin-form test
+  const { data: files } = await svc.storage.from("catalogue").list("experiences", { limit: 1000 });
+  const mine = (files ?? []).filter((f) => f.created_at && new Date(f.created_at).getTime() >= startedAt);
+  if (mine.length) await svc.storage.from("catalogue").remove(mine.map((f) => `experiences/${f.name}`));
 });
+
+// a valid 1x1 PNG — the browser decodes it, shrinks it and uploads it as WebP
+const PNG_1X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 async function continueAsGuest(page: Page) {
   await page.goto("/");
@@ -202,6 +212,11 @@ test("admin: real email login, dashboard, catalogue CRUD, bookings, users", asyn
   await expect(page.getByText(/Bookings by status/)).toBeVisible();
   await expectNoCrash(page);
 
+  // ---- needs attention: the traveller paid, then cancelled -> the money is still with us ----
+  const attention = page.getByRole("region", { name: /Needs attention/ });
+  await expect(attention).toBeVisible();
+  await expect(attention.locator(`a[href="/admin/bookings/${bookingId}"]`)).toContainText(/Refund RM\s.* to /);
+
   // ---- create an experience through the real form (price with sen!) ----
   await page.goto("/admin/experiences/new");
   await page.getByLabel("Title").fill(tourTitle);
@@ -215,7 +230,15 @@ test("admin: real email login, dashboard, catalogue CRUD, bookings, users", asyn
   await page.getByLabel("Start times").fill("09:00");
   await page.getByLabel("Capacity / slot").fill("4");
   await page.getByLabel("Lead time (hours)").fill("12");
-  await page.getByLabel("Photos").fill("/demo/kayak.jpg");
+  // photos: upload from the device (resized in the browser, stored in Storage) + paste a link
+  await page.locator("#images-file").setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: PNG_1X1 });
+  await expect(page.getByRole("img", { name: "Photo 1" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("img", { name: "Photo 1" })).toHaveAttribute("src", /\/storage\/v1\/object\/public\/catalogue\/experiences\/.+\.(webp|png)$/);
+  await page.getByLabel("Image link").fill("/demo/kayak.jpg");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("img", { name: "Photo 2" })).toBeVisible();
+  await page.getByRole("button", { name: "Make cover" }).click(); // the pasted one becomes the cover
+  await expect(page.getByRole("img", { name: "Photo 1" })).toHaveAttribute("src", "/demo/kayak.jpg");
   // category / day "chips" are labels around a hidden checkbox — click the chip, like a person would
   await page.locator("label", { hasText: /^Nature$/ }).click();
   await page.locator("label", { hasText: /^Mon$/ }).click();
@@ -224,6 +247,13 @@ test("admin: real email login, dashboard, catalogue CRUD, bookings, users", asyn
   await page.getByRole("button", { name: "Create experience" }).click();
   await page.waitForURL(/\/admin\/experiences$/, { timeout: 60_000 });
   await expect(page.getByText(tourTitle)).toBeVisible();
+  // both photos were saved, cover first
+  const { data: saved } = await svc.from("experiences").select("id").eq("title", tourTitle).single();
+  const { data: imgs } = await svc.from("images").select("url, is_primary, sort_order").eq("owner_id", saved!.id).order("sort_order");
+  expect(imgs).toHaveLength(2);
+  expect(imgs![0]).toMatchObject({ url: "/demo/kayak.jpg", is_primary: true });
+  expect(imgs![1].url).toMatch(/\/storage\/v1\/object\/public\/catalogue\/experiences\//);
+  expect((await fetch(imgs![1].url)).status).toBe(200); // publicly readable
 
   // ---- it's live for travellers ----
   await page.goto("/explore");
@@ -247,6 +277,13 @@ test("admin: real email login, dashboard, catalogue CRUD, bookings, users", asyn
   await expect(page.getByText("Update status")).toBeVisible();
   await page.getByRole("button", { name: /Mark awaiting payment/i }).click();
   await expect(page.getByText("Awaiting payment").first()).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: /Mark cancelled/i }).click();
+  await expect(page.getByText("Cancelled", { exact: true })).toBeVisible({ timeout: 30_000 }); // the badge, not a button
+  // ...and once the refund is sent and recorded, it leaves the "needs attention" list
+  await page.getByRole("button", { name: /Mark refunded/i }).click();
+  await expect(page.getByText("Refunded", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await page.goto("/admin");
+  await expect(page.locator(`a[href="/admin/bookings/${bookingId}"]`).filter({ hasText: /Refund RM/ })).toHaveCount(0);
 
   // ---- users + vendors + attractions render ----
   for (const path of ["/admin/users", "/admin/vendors", "/admin/attractions"]) {

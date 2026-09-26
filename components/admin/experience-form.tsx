@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { PhotoField } from "@/components/admin/photo-field";
+import { DEMO_MODE } from "@/lib/demo/mode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -194,15 +196,13 @@ export function ExperienceForm({
       <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-card">
         <Field
           label="Photos"
-          htmlFor="images"
-          hint="One image URL per line. The first is used as the cover photo."
+          hint="Up to 8 photos. The first is the cover — use “Make cover” to change it."
         >
-          <Textarea
-            id="images"
+          <PhotoField
             name="images"
-            rows={3}
-            placeholder="https://images.example.com/photo.jpg"
-            defaultValue={(e?.images ?? []).map((i) => i.url).join("\n")}
+            folder="experiences"
+            initial={(e?.images ?? []).map((i) => i.url)}
+            canUpload={!DEMO_MODE}
           />
         </Field>
         <Field

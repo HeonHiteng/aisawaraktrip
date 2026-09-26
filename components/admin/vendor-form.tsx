@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
+import { PhotoField } from "@/components/admin/photo-field";
+import { DEMO_MODE } from "@/lib/demo/mode";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -87,16 +89,15 @@ export function VendorForm({
           </Field>
         </div>
         <Field
-          label="Logo / avatar URL"
-          htmlFor="avatarUrl"
-          hint="Leave blank to show initials instead."
+          label="Logo / avatar"
+          hint="Leave empty to show initials instead."
         >
-          <Input
-            id="avatarUrl"
+          <PhotoField
             name="avatarUrl"
-            type="url"
-            placeholder="https://images.example.com/logo.jpg"
-            defaultValue={v?.avatarUrl ?? ""}
+            folder="vendors"
+            max={1}
+            initial={v?.avatarUrl ? [v.avatarUrl] : []}
+            canUpload={!DEMO_MODE}
           />
         </Field>
       </div>

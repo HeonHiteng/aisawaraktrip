@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { StatusBadge } from "@/components/common/status-badge";
 import {
   HBars,
   WeeklyBookingsChart,
   WeeklyRevenueChart,
 } from "@/components/admin/analytics-charts";
-import { adminAnalytics, adminListBookings } from "@/lib/domain/admin";
+import { NeedsAttention } from "@/components/admin/needs-attention";
+import { computeAttention } from "@/lib/admin-attention";
+import { adminAnalytics, adminListBookings, adminPaidPayments } from "@/lib/domain/admin";
 import { formatDate, formatMYR } from "@/lib/format";
 import { BOOKING_STATUS_META, type BookingStatus } from "@/types/booking";
 
@@ -63,10 +65,16 @@ function StatTile({
 }
 
 export default async function AdminOverview() {
-  const [a, bookings] = await Promise.all([
+  const [a, bookings, paidPayments] = await Promise.all([
     adminAnalytics(),
     adminListBookings(),
+    adminPaidPayments(),
   ]);
+  const attention = computeAttention({
+    bookings,
+    paidPayments,
+    unverifiedVendors: a.catalogue.unverifiedVendors,
+  });
   const recent = bookings.slice(0, 6);
 
   return (
@@ -96,16 +104,7 @@ export default async function AdminOverview() {
         />
       </div>
 
-      {a.catalogue.unverifiedVendors > 0 && (
-        <Link
-          href="/admin/vendors"
-          className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 hover:bg-amber-500/15 dark:text-amber-400"
-        >
-          <AlertTriangle className="size-4" />
-          {a.catalogue.unverifiedVendors} vendor
-          {a.catalogue.unverifiedVendors === 1 ? "" : "s"} awaiting verification
-        </Link>
-      )}
+      <NeedsAttention attention={attention} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <WeeklyBookingsChart data={a.weekly} />

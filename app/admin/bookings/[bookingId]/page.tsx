@@ -16,7 +16,7 @@ const NEXT_STATUS: Record<BookingStatus, BookingStatus[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["completed", "cancelled", "refunded"],
   completed: ["refunded"],
-  cancelled: ["pending"],
+  cancelled: ["pending", "refunded"],
   refunded: [],
 };
 

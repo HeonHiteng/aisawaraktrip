@@ -27,6 +27,7 @@ import {
   type AttractionRow,
   type ExperienceRow,
 } from "@/lib/domain/mappers/catalogue";
+import type { PaidPayment } from "@/lib/admin-attention";
 import { slugify } from "@/lib/validation/admin";
 import type {
   ExperienceForm,
@@ -546,6 +547,24 @@ export async function adminSetBookingStatus(
     .select("id");
   if (error) fail(error, "update");
   if (!data?.length) throw new AdminError("Booking not found.");
+}
+
+/** Payments that actually arrived (status `paid`) — the "needs attention" rules read these. */
+export async function adminPaidPayments(): Promise<PaidPayment[]> {
+  if (DEMO_MODE)
+    return allDemoPayments()
+      .filter((p) => p.status === "paid")
+      .map((p) => ({ bookingId: p.bookingId, amount: p.amount }));
+  const db = await createClient();
+  const rows = await fetchAll((from, to) =>
+    db
+      .from("payments")
+      .select("id, booking_id, amount")
+      .eq("status", "paid")
+      .order("id")
+      .range(from, to),
+  );
+  return rows.map((p) => ({ bookingId: p.booking_id, amount: Number(p.amount) }));
 }
 
 // ---------- users ----------

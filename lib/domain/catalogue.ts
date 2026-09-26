@@ -78,7 +78,9 @@ function sortAttractions(list: Attraction[], sort?: SortOption): Attraction[] {
     case "price-desc":
       return sorted.sort((a, b) => b.priceMin - a.priceMin);
     default:
-      return sorted; // no rating field on attractions — keep catalogue order
+      // no rating on attractions: the must-see ranking first (ranked places by rank, then the rest,
+      // keeping catalogue order — Array.sort is stable)
+      return sorted.sort((a, b) => (a.featuredRank ?? 999) - (b.featuredRank ?? 999));
   }
 }
 

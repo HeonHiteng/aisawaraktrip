@@ -616,6 +616,25 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ✅ 24 new unit tests (fake client) + a live test that skips without a key.
 - ⚠️ Not verified against the real API (no key here): run `npm run test:live` after adding one.
 
+## Government guide: must-see + local food guide (free, no paid services)
+
+- ✅ **Must-see ranking** for attractions (`featured_rank`, admin field "Must-see rank"): badge on cards + detail page,
+  ranked places listed first on Explore, and a nudge in the planner. Live DB ranked: Semenggoh 1, Cultural Village 3,
+  Bako 5, Waterfront 6.
+- ✅ **Local food guide**: 30 places (Kuching 12, Sibu 7, Miri 7, Bintulu 4) with dish, $/$$/$$$ tier, splurge flag and a
+  Google Maps link, from the guide you shared. **Explore → Food** tab (filter by city / dish / search, "Open in Maps");
+  **Admin → Food guide** (add / edit / publish / delete). No RM prices shown: tiers only.
+- ✅ **Planner uses it**: lunches/dinners name a real Kuching place (lunch leans laksa/kolo mee, dinner umai/pansoh/midin;
+  each place once before repeating; tight budget never above $$; the last evening of a 3+ day trip is a splurge). Meal
+  cost is a labelled rough estimate per tier (RM12 / 30 / 65; splurge 90) — the guide gives tiers, not prices.
+- ✅ **Kuching-region guard**: a Kuching itinerary never includes places outside Kuching (Miri/Mulu/Niah/Lambir).
+- 📝 **Drafts to finish** (unpublished, admin → Attractions): Gunung Mulu (rank 2), Niah Caves (4), Lambir Hills (7),
+  Kuching Wetlands (8, entry ~RM10). Only what the guide says is filled in — add photos, real price, hours and visit
+  length before publishing (Mulu/Niah/Lambir won't appear in Kuching plans until multi-city exists).
+- 🐛 Fixed: two quick taps on Explore filters could overwrite each other.
+- ⏭️ Not done (needs a decision or money): multi-city planning (Miri/Sibu/Bintulu trips), halal / vegetarian info per eatery,
+  opening hours, photos for eateries, a "Google Maps link" inside the itinerary item (needs a DB column).
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

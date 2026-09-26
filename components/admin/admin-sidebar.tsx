@@ -9,6 +9,7 @@ import {
   MapPin,
   Sparkles,
   Store,
+  Utensils,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ export const ADMIN_LINKS: AdminLink[] = [
   { href: "/admin/experiences", label: "Experiences", icon: Sparkles },
   { href: "/admin/vendors", label: "Vendors", icon: Store },
   { href: "/admin/attractions", label: "Attractions", icon: MapPin },
+  { href: "/admin/eateries", label: "Food guide", icon: Utensils },
   { href: "/admin/bookings", label: "Bookings", icon: CalendarCheck },
   { href: "/admin/users", label: "Users", icon: Users },
 ];

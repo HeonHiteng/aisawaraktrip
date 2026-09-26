@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, MapPin, Ticket } from "lucide-react";
 import { CategoryBadges } from "@/components/explore/category-badges";
 import { CoverImage } from "@/components/explore/cover-image";
 import { SampleBadge } from "@/components/common/sample-badge";
+import { MustSeeBadge } from "@/components/common/must-see-badge";
 import { getAttraction } from "@/lib/domain/catalogue";
 import { formatDuration, formatMYR } from "@/lib/format";
 
@@ -50,6 +51,7 @@ export default async function AttractionPage({
           seed={att.slug}
           priority
         />
+        <MustSeeBadge rank={att.featuredRank} />
         {att.isSample && <SampleBadge />}
       </div>
 

@@ -28,11 +28,14 @@ import {
   type ExperienceRow,
 } from "@/lib/domain/mappers/catalogue";
 import type { PaidPayment } from "@/lib/admin-attention";
+import { eateryFormToRow, eateryFromRow } from "@/lib/domain/mappers/eateries";
+import type { Eatery } from "@/types/eatery";
 import { slugify } from "@/lib/validation/admin";
 import type {
   ExperienceForm,
   VendorForm,
   AttractionForm,
+  EateryForm,
 } from "@/lib/validation/admin";
 import type {
   Attraction,
@@ -445,6 +448,7 @@ export async function adminSaveAttraction(
       url,
       alt: input.name || null,
     })),
+    featuredRank: input.featuredRank ?? null,
     isSample: existing?.isSample ?? false,
     isPublished: input.isPublished,
   };
@@ -486,6 +490,89 @@ export async function adminSetAttractionPublished(
     .from("attractions")
     .update({ is_published: isPublished })
     .eq("id", id);
+  if (error) fail(error, "update");
+}
+
+// ---------- eateries (the local food guide) ----------
+
+export async function adminListEateries(): Promise<Eatery[]> {
+  if (DEMO_MODE) return catalogueStore().eateries;
+  const db = await createClient();
+  const rows = await fetchAll((from, to) =>
+    db.from("eateries").select("*").order("city").order("sort_order").order("id").range(from, to),
+  );
+  return rows.map(eateryFromRow);
+}
+
+export async function adminGetEatery(id: string): Promise<Eatery | null> {
+  if (DEMO_MODE) return catalogueStore().eateries.find((e) => e.id === id) ?? null;
+  if (!isUuid(id)) return null;
+  const { data, error } = await (await createClient()).from("eateries").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`admin eatery: ${error.message}`);
+  return data ? eateryFromRow(data) : null;
+}
+
+export async function adminSaveEatery(input: EateryForm): Promise<Eatery> {
+  if (!DEMO_MODE) {
+    if (input.id && !isUuid(input.id)) throw notUuid("eatery");
+    const db = await createClient();
+    const row = eateryFormToRow(input);
+    if (input.id) {
+      const { data, error } = await db.from("eateries").update(row).eq("id", input.id).select("*").maybeSingle();
+      if (error) fail(error, "save");
+      if (!data) throw new AdminError("Eatery not found.");
+      return eateryFromRow(data);
+    }
+    // new: pick a free slug (-2, -3, ... on a clash)
+    const base = slugify(input.name) || "eatery";
+    for (let n = 1; n <= 20; n++) {
+      const slug = n === 1 ? base : `${base}-${n}`;
+      const { data, error } = await db.from("eateries").insert({ ...row, slug }).select("*").single();
+      if (!error) return eateryFromRow(data);
+      if (error.code !== "23505") fail(error, "save"); // 23505 = slug taken: try the next one
+    }
+    throw new AdminError("Couldn't find a free web address for that name — try a slightly different name.");
+  }
+
+  const store = catalogueStore();
+  const existing = input.id ? store.eateries.find((e) => e.id === input.id) : undefined;
+  const record: Eatery = {
+    id: existing?.id ?? `eat-${uid()}`,
+    slug: existing?.slug ?? slugify(input.name),
+    name: input.name,
+    city: input.city,
+    dishes: input.dishes,
+    priceTier: (input.priceTier as Eatery["priceTier"]) ?? null,
+    isSplurge: input.isSplurge,
+    mapsUrl: input.mapsUrl || null,
+    notes: input.notes || null,
+    sortOrder: existing?.sortOrder ?? store.eateries.length,
+    isPublished: input.isPublished,
+  };
+  if (existing) Object.assign(existing, record);
+  else store.eateries.push(record);
+  return record;
+}
+
+export async function adminDeleteEatery(id: string): Promise<void> {
+  if (DEMO_MODE) {
+    const store = catalogueStore();
+    store.eateries = store.eateries.filter((e) => e.id !== id);
+    return;
+  }
+  if (!isUuid(id)) return;
+  const { error } = await (await createClient()).from("eateries").delete().eq("id", id);
+  if (error) fail(error, "delete");
+}
+
+export async function adminSetEateryPublished(id: string, isPublished: boolean): Promise<void> {
+  if (DEMO_MODE) {
+    const e = catalogueStore().eateries.find((x) => x.id === id);
+    if (e) e.isPublished = isPublished;
+    return;
+  }
+  if (!isUuid(id)) return;
+  const { error } = await (await createClient()).from("eateries").update({ is_published: isPublished }).eq("id", id);
   if (error) fail(error, "update");
 }
 

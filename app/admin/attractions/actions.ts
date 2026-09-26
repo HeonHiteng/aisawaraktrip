@@ -32,6 +32,7 @@ export async function saveAttraction(
     categories: formData.getAll("categories"),
     tips: formData.get("tips") ?? "",
     images: formData.get("images") ?? "",
+    featuredRank: formData.get("featuredRank") ?? "",
     isPublished: formData.get("isPublished") ?? "",
   });
   if (!parsed.success) {

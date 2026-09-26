@@ -63,7 +63,7 @@ const IMG = {
   jungleTrail: "/demo/jungle-trail.jpg",
 };
 
-export const demoAttractions: Attraction[] = [
+const baseAttractions: Omit<Attraction, "featuredRank">[] = [
   {
     id: "att-waterfront",
     slug: "kuching-waterfront",
@@ -252,6 +252,19 @@ export const demoAttractions: Attraction[] = [
     isPublished: true,
   },
 ];
+
+// The must-see ranking (1-5 must-see, 6+ also great) — mirrors supabase/seed-guide.sql.
+const MUST_SEE: Record<string, number> = {
+  "semenggoh-nature-reserve": 1,
+  "sarawak-cultural-village": 3,
+  "bako-national-park": 5,
+  "kuching-waterfront": 6,
+};
+
+export const demoAttractions: Attraction[] = baseAttractions.map((a) => ({
+  ...a,
+  featuredRank: MUST_SEE[a.slug] ?? null,
+}));
 
 const vendor = {
   foodWalks: {

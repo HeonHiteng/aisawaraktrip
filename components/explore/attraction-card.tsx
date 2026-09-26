@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 import { CoverImage } from "@/components/explore/cover-image";
+import { MustSeeBadge } from "@/components/common/must-see-badge";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { formatDuration, formatMYR } from "@/lib/format";
 import type { Attraction } from "@/types/catalogue";
@@ -31,6 +32,7 @@ export function AttractionCard({ attraction, priority }: { attraction: Attractio
         <span className="absolute bottom-3 right-3 text-sm font-bold text-white">
           {price(attraction)}
         </span>
+        <MustSeeBadge rank={attraction.featuredRank} />
         {attraction.isSample && <SampleBadge />}
       </div>
       <div className="space-y-2.5 p-4">

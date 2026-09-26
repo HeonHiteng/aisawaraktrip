@@ -20,6 +20,7 @@
     "android:sync": "cap sync android",
     "android:apk": "node scripts/android-apk.mjs",
     "android:assets": "node scripts/android-assets.mjs",
+    "seed:guide": "node scripts/seed-guide.mjs",
     "android:aab": "node scripts/android-release.mjs",
     "play:screenshots": "node scripts/play-screenshots.mjs",
     "db:push": "supabase db push",

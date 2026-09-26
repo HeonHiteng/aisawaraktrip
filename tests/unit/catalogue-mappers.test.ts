@@ -139,6 +139,7 @@ describe("attractionFromRow", () => {
     is_sample: true,
     is_published: true,
     created_by: null,
+    featured_rank: 3,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     location: null,

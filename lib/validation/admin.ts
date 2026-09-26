@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CITIES, DISH_SLUGS } from "@/types/eatery";
 
 const CATEGORY = z.enum([
   "nature",
@@ -91,9 +92,35 @@ export const attractionFormSchema = z.object({
   categories: z.array(CATEGORY).min(1, "Pick at least one category.").max(7),
   tips: z.string().trim().max(500),
   images: z.string().trim().max(2000),
+  /** 1-5 must-see, 6+ also great; blank = unranked. */
+  featuredRank: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    z.coerce.number().int().min(1).max(99).nullable(),
+  ).optional(),
   isPublished: checkbox,
 });
 export type AttractionForm = z.infer<typeof attractionFormSchema>;
+
+export const eateryFormSchema = z.object({
+  id: z.string().trim().optional(),
+  name: z.string().trim().min(2, "Enter the place's name.").max(120),
+  city: z.enum(CITIES, { message: "Pick a city." }),
+  dishes: z.array(z.enum(DISH_SLUGS as [string, ...string[]])).max(9),
+  /** 1-3 = $-$$; blank = not stated */
+  priceTier: z.preprocess(
+    (v) => (v === "" || v == null ? null : v),
+    z.coerce.number().int().min(1).max(3).nullable(),
+  ),
+  isSplurge: checkbox,
+  mapsUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .refine((v) => v === "" || /^https:\/\//i.test(v), "Use a full https:// Google Maps link."),
+  notes: z.string().trim().max(300),
+  isPublished: checkbox,
+});
+export type EateryForm = z.infer<typeof eateryFormSchema>;
 
 export const bookingStatusSchema = z.object({
   bookingId: z.string().min(1),

@@ -1,5 +1,6 @@
 import "server-only";
 import { listAttractions, listExperiences } from "@/lib/domain/catalogue";
+import { listEateries } from "@/lib/domain/eateries";
 import {
   applyRefinement,
   buildItinerary,
@@ -24,11 +25,12 @@ import type { Itinerary, TripInput } from "@/types/trip";
  * the builder runs alone: the planner always works.
  */
 export async function generateItinerary(trip: TripInput): Promise<Itinerary> {
-  const [experiences, attractions] = await Promise.all([
+  const [experiences, attractions, eateries] = await Promise.all([
     listExperiences(),
     listAttractions(),
+    listEateries({ city: "Kuching" }),
   ]);
-  const catalogue = { experiences, attractions };
+  const catalogue = { experiences, attractions, eateries };
 
   if (aiEnabled()) {
     const brief = await requestBrief(trip, catalogue);

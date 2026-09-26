@@ -74,6 +74,7 @@ export function attractionFormToRpc(input: AttractionForm): Json {
     tips: input.tips,
     categories: input.categories,
     images: parseList(input.images),
+    featuredRank: input.featuredRank ?? null,
     isPublished: input.isPublished,
   };
 }

@@ -3,6 +3,9 @@ import { Suspense } from "react";
 import { ExploreControls } from "@/components/explore/explore-controls";
 import { ExperienceCard } from "@/components/explore/experience-card";
 import { AttractionCard } from "@/components/explore/attraction-card";
+import { EateryCard } from "@/components/explore/eatery-card";
+import { listEateries } from "@/lib/domain/eateries";
+import { isCity } from "@/types/eatery";
 import { listAttractions, listExperiences } from "@/lib/domain/catalogue";
 import type { SortOption } from "@/lib/domain/catalogue";
 import type { CategorySlug } from "@/types/catalogue";
@@ -25,7 +28,7 @@ export default async function ExplorePage({
   searchParams,
 }: PageProps<"/explore">) {
   const sp = await searchParams;
-  const tab = sp.tab === "attractions" ? "attractions" : "experiences";
+  const tab = sp.tab === "attractions" || sp.tab === "food" ? sp.tab : "experiences";
   const search = typeof sp.q === "string" ? sp.q : undefined;
   const categories = (typeof sp.cat === "string" ? sp.cat.split(",") : [])
     .filter((c): c is CategorySlug => (CATS as string[]).includes(c));
@@ -36,7 +39,11 @@ export default async function ExplorePage({
   const opts = { search, categories, sort };
   const experiences = tab === "experiences" ? await listExperiences(opts) : [];
   const attractions = tab === "attractions" ? await listAttractions(opts) : [];
-  const count = tab === "experiences" ? experiences.length : attractions.length;
+  const cityParam = typeof sp.city === "string" && isCity(sp.city) ? sp.city : undefined;
+  const dishParam = typeof sp.dish === "string" ? sp.dish : undefined;
+  const eateries = tab === "food" ? await listEateries({ city: cityParam, dish: dishParam, search }) : [];
+  const count =
+    tab === "experiences" ? experiences.length : tab === "attractions" ? attractions.length : eateries.length;
 
   return (
     <div className="space-y-5">
@@ -52,8 +59,10 @@ export default async function ExplorePage({
       </Suspense>
 
       <p className="text-xs text-muted-foreground">
-        {count} {tab === "experiences" ? "experience" : "attraction"}
-        {count === 1 ? "" : "s"}
+        {count}{" "}
+        {tab === "food"
+          ? count === 1 ? "place to eat" : "places to eat"
+          : `${tab === "experiences" ? "experience" : "attraction"}${count === 1 ? "" : "s"}`}
       </p>
 
       {count === 0 ? (
@@ -66,9 +75,11 @@ export default async function ExplorePage({
             ? experiences.map((e, i) => (
                 <ExperienceCard key={e.id} experience={e} priority={i === 0} />
               ))
-            : attractions.map((a, i) => (
-                <AttractionCard key={a.id} attraction={a} priority={i === 0} />
-              ))}
+            : tab === "attractions"
+              ? attractions.map((a, i) => (
+                  <AttractionCard key={a.id} attraction={a} priority={i === 0} />
+                ))
+              : eateries.map((e) => <EateryCard key={e.id} eatery={e} />)}
         </div>
       )}
     </div>

@@ -67,6 +67,10 @@ the catalogue and bookings.
   slugs and re-checked by `lib/ai/brief.ts` `sanitizeBrief`; the deterministic `lib/ai/itinerary.ts` does ALL
   scheduling and pricing from the DB. No key, an error or a timeout => the deterministic planner alone.
   Traveller text goes to the model as quoted data. Check a key with `npm run test:live` (`tests/live/ai.live.test.ts`).
+- **Food guide + must-see**: `eateries` table (dish, $-$$ tier, Maps link; public reads published, admin writes) and
+  `attractions.featured_rank` (1-5 = "must-see", 6+ = "also great"). The guide's data lives in `data/eateries.json`
+  (demo fixtures + `npm run seed:guide` -> `supabase/seed-guide.sql`). Meals in a plan name a real Kuching place
+  from it (`lib/ai/meals.ts`); the planner only uses Kuching-region places (`locations.area = 'Kuching'`).
 - **Trips/bookings** flow through `lib/domain/{trips,bookings}` → in-memory
   `lib/demo/store.ts` in demo mode, Supabase otherwise. Booking prices are
   snapshotted server-side in `createBooking`, never from the client.

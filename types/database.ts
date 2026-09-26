@@ -52,6 +52,7 @@ export type Database = {
           contact: Json
           created_at: string
           created_by: string | null
+          featured_rank: number | null
           description: string | null
           id: string
           is_free: boolean
@@ -76,6 +77,7 @@ export type Database = {
           contact?: Json
           created_at?: string
           created_by?: string | null
+          featured_rank?: number | null
           description?: string | null
           id?: string
           is_free?: boolean
@@ -101,6 +103,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          featured_rank?: number | null
           id?: string
           is_free?: boolean
           is_published?: boolean
@@ -322,6 +325,54 @@ export type Database = {
           name?: string
           slug?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      eateries: {
+        Row: {
+          city: string
+          created_at: string
+          dishes: string[]
+          id: string
+          is_published: boolean
+          is_splurge: boolean
+          maps_url: string | null
+          name: string
+          notes: string | null
+          price_tier: number | null
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          dishes?: string[]
+          id?: string
+          is_published?: boolean
+          is_splurge?: boolean
+          maps_url?: string | null
+          name: string
+          notes?: string | null
+          price_tier?: number | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          dishes?: string[]
+          id?: string
+          is_published?: boolean
+          is_splurge?: boolean
+          maps_url?: string | null
+          name?: string
+          notes?: string | null
+          price_tier?: number | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }

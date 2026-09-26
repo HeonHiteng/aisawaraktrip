@@ -98,6 +98,7 @@ export function applyBrief(c: Candidates, brief: Brief): Candidates {
   const attractions = keep(c.attractions);
   const usable = experiences.length + attractions.length > 0;
   return {
+    ...c, // keeps anything else the caller passed (the food guide)
     experiences: usable ? experiences : c.experiences,
     attractions: usable ? attractions : c.attractions,
     prefer: brief.preferSlugs,

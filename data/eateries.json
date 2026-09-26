@@ -1,0 +1,49 @@
+{
+  "_": "Local food guide (dish, price tier, Google Maps link). Single source for demo mode and for the SQL seed (npm run seed:eateries). price_tier 1-3 = $, $$, $$$ as in the guide; null = not stated.",
+  "dishLabels": {
+    "laksa": "Sarawak laksa",
+    "kolo-mee": "Kolo mee",
+    "kampua": "Kampua",
+    "umai": "Umai",
+    "manok-pansoh": "Manok pansoh",
+    "midin": "Midin",
+    "kompia": "Kompia",
+    "kek-lapis": "Kek lapis",
+    "fine-dining": "Fine dining"
+  },
+  "eateries": [
+    { "slug": "mui-xin-laksa", "name": "Mui Xin Laksa", "city": "Kuching", "dishes": ["laksa"], "tier": 1, "maps": "https://maps.app.goo.gl/AC1NjSx1w39RLkEz5" },
+    { "slug": "126-laksa", "name": "126 Laksa", "city": "Kuching", "dishes": ["laksa"], "tier": 2, "maps": "https://maps.app.goo.gl/nztN4B7dU8KwRPZS9" },
+    { "slug": "shirley-traditional-kolo-mee", "name": "Shirley Traditional Kolo Mee", "city": "Kuching", "dishes": ["kolo-mee"], "tier": 1, "maps": "https://maps.app.goo.gl/DBU3MiF1aW7i5moPA" },
+    { "slug": "annie-kolo-mee", "name": "Annie Kolo Mee", "city": "Kuching", "dishes": ["kolo-mee"], "tier": 2, "maps": "https://maps.app.goo.gl/fWd1NVpVsTtD3J9G9" },
+    { "slug": "lepau", "name": "Lepau", "city": "Kuching", "dishes": ["umai", "manok-pansoh", "midin"], "tier": 3, "maps": "https://maps.app.goo.gl/CaxHjgiPR6ute1JN9", "notes": "One stop for umai, manok pansoh and midin." },
+    { "slug": "jak-maan", "name": "JAK MA'AN", "city": "Kuching", "dishes": ["manok-pansoh"], "tier": 2, "maps": "https://maps.app.goo.gl/coaUaWEv5EtFYBPb6" },
+    { "slug": "topspot-food-court", "name": "Topspot Food Court", "city": "Kuching", "dishes": ["midin"], "tier": 2, "maps": "https://maps.app.goo.gl/kRb5nVEJ8GBSyY9M6" },
+    { "slug": "kompia-house", "name": "Kompia House", "city": "Kuching", "dishes": ["kompia"], "tier": 1, "maps": "https://maps.app.goo.gl/sWaqnz9jtbE5s8dX9" },
+    { "slug": "dayang-salhah", "name": "Dayang Salhah", "city": "Kuching", "dishes": ["kek-lapis"], "tier": 1, "maps": "https://maps.app.goo.gl/sVKhAhmMcnB6cYaw6" },
+    { "slug": "kek-lapis-mama-su", "name": "Kek Lapis Mama Su", "city": "Kuching", "dishes": ["kek-lapis"], "tier": 2, "maps": "https://maps.app.goo.gl/WDMU7Dt1Ew1ancE79" },
+    { "slug": "kek-lapis-warisan", "name": "Kek Lapis Warisan", "city": "Kuching", "dishes": ["kek-lapis"], "tier": 3, "maps": "https://maps.app.goo.gl/VPEgNAz9VE7kHVTN7" },
+    { "slug": "roots-restaurant", "name": "ROOTS Restaurant", "city": "Kuching", "dishes": ["fine-dining"], "tier": 3, "splurge": true, "maps": "https://maps.app.goo.gl/gbKERWjGE2VR75fS7" },
+
+    { "slug": "liang-yew-cafe", "name": "Liang Yew Cafe", "city": "Sibu", "dishes": ["kampua"], "tier": 1, "maps": "https://maps.app.goo.gl/XVkn7t6qy3bvKB9R9" },
+    { "slug": "noodle-house-laichee", "name": "Noodle House LaiChee", "city": "Sibu", "dishes": ["kampua"], "tier": 2, "maps": "https://maps.app.goo.gl/YDwMvyyYHBTMVnPo8" },
+    { "slug": "sheng-kee-63", "name": "Sheng Kee 63", "city": "Sibu", "dishes": ["kompia"], "tier": 1, "maps": "https://maps.app.goo.gl/EBLMfVsnyKdZTtbv6" },
+    { "slug": "fatt-bakery", "name": "Fatt Bakery", "city": "Sibu", "dishes": ["kompia"], "tier": 1, "maps": "https://maps.app.goo.gl/E186PAcCrfSoQEFz9" },
+    { "slug": "mak-borneo", "name": "Mak Borneo", "city": "Sibu", "dishes": ["umai", "manok-pansoh"], "tier": 2, "maps": "https://maps.app.goo.gl/xeTyhGszeSiAgRTR6" },
+    { "slug": "hajijah-kek-lapis", "name": "Hajijah Kek Lapis", "city": "Sibu", "dishes": ["kek-lapis"], "tier": 1, "maps": "https://maps.app.goo.gl/HQUFPis966gsBWod9" },
+    { "slug": "mingziang-court", "name": "Mingziang Court", "city": "Sibu", "dishes": ["fine-dining"], "splurge": true, "notes": "Try the Empurau fish.", "maps": "https://maps.app.goo.gl/tSYHtsTwpvJnY9X59" },
+
+    { "slug": "a-mas-laksa", "name": "A Ma's Laksa", "city": "Miri", "dishes": ["laksa"], "tier": 1, "maps": "https://maps.app.goo.gl/EgHJXqxh5inv2BVE6" },
+    { "slug": "laksa-lolita", "name": "Laksa Lolita", "city": "Miri", "dishes": ["laksa"], "tier": 1, "maps": "https://maps.app.goo.gl/QzoBCTyanekgVPmZ9" },
+    { "slug": "kebaya-story", "name": "Kebaya Story", "city": "Miri", "dishes": ["laksa"], "tier": 2, "maps": "https://maps.app.goo.gl/5pwSege43g1bEmaY7" },
+    { "slug": "mat-kolok", "name": "Mat Kolok", "city": "Miri", "dishes": ["kolo-mee"], "tier": 1, "maps": "https://maps.app.goo.gl/KzuUgAq8pCzjAcCX6" },
+    { "slug": "lapis-by-bebulak", "name": "LAPIS by Be'Bulak", "city": "Miri", "dishes": ["kek-lapis"], "tier": 2, "notes": "Near the airport.", "maps": "https://maps.app.goo.gl/igmKW2enBKTMkZ257" },
+    { "slug": "cavakita-rooftop-bar", "name": "Cavakita Rooftop Bar", "city": "Miri", "dishes": ["fine-dining"], "splurge": true, "notes": "Go for the sunset.", "maps": "https://maps.app.goo.gl/za9KEUj7XCZETikc6" },
+    { "slug": "the-meld", "name": "THE MELD", "city": "Miri", "dishes": ["fine-dining"], "splurge": true, "notes": "A romantic dinner.", "maps": "https://maps.app.goo.gl/umane5Z4cwEWBhCH6" },
+
+    { "slug": "sumandapur-cafe", "name": "Sumandapur Cafe", "city": "Bintulu", "dishes": ["laksa", "umai", "manok-pansoh"], "tier": 2, "notes": "Laksa, umai and pansoh all in one place.", "maps": "https://maps.app.goo.gl/xZvAQHYdDuWpR2ye6" },
+    { "slug": "ho-ga-pang-laksa", "name": "Ho Ga Pang Laksa", "city": "Bintulu", "dishes": ["laksa"], "tier": 1, "maps": "https://maps.app.goo.gl/P6Uis4UEyuedApMk8" },
+    { "slug": "153-kolo-mee", "name": "153 Kolo Mee", "city": "Bintulu", "dishes": ["kolo-mee"], "tier": 1, "maps": "https://maps.app.goo.gl/xxVchBL7kWJwX4Et8" },
+    { "slug": "the-italian-fairfield", "name": "The Italian (Fairfield Marriott)", "city": "Bintulu", "dishes": ["fine-dining"], "splurge": true, "maps": "https://maps.app.goo.gl/Pn76C1wgcTMPa7Y6A" }
+  ]
+}

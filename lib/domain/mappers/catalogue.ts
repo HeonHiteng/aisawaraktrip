@@ -166,6 +166,7 @@ export function attractionFromRow(
     tips: row.tips,
     categories: categoriesFrom(row.attraction_categories),
     images,
+    featuredRank: row.featured_rank,
     isSample: row.is_sample,
     isPublished: row.is_published,
   };

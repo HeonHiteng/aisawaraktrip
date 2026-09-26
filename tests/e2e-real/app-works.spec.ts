@@ -76,6 +76,14 @@ test("traveller journey: explore → plan → refine → book → pay → review
   await expect(page.getByText("6 experiences")).toBeVisible();
   await page.getByRole("tab", { name: "Attractions" }).click();
   await expect(page.getByText("8 attractions")).toBeVisible();
+  // must-see places first; the draft places (Mulu, Niah, ...) are hidden from travellers
+  await expect(page.locator("a[href^='/explore/attractions/']").first()).toContainText("Must-see");
+  await expect(page.getByText("Gunung Mulu")).toHaveCount(0);
+  await page.getByRole("tab", { name: "Food" }).click();
+  await expect(page.getByText("30 places to eat")).toBeVisible();
+  await page.getByRole("group", { name: "City" }).getByRole("button", { name: "Bintulu" }).click();
+  await expect(page.getByText("4 places to eat")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sumandapur Cafe" })).toBeVisible();
 
   // ---- an experience page ----
   await page.goto("/explore/experiences/kuching-heritage-street-food-walk");
@@ -89,6 +97,7 @@ test("traveller journey: explore → plan → refine → book → pay → review
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/, { timeout: 60_000 });
   tripUrl = page.url();
   await expect(page.getByText("AI-generated")).toBeVisible();
+  await expect(page.getByText("From our local food guide.").first()).toBeVisible(); // meals name real guide places
   await page.getByRole("button", { name: "Add more food" }).click();
   await expect(page.getByText(/Edited by you/)).toBeVisible({ timeout: 30_000 });
 

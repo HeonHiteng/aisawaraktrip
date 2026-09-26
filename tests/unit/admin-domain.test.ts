@@ -225,3 +225,60 @@ describe("admin bookings", () => {
     expect(updated?.status).toBe("completed");
   });
 });
+
+// ---- food guide + must-see rank (demo branch) ----
+import {
+  adminDeleteEatery,
+  adminGetEatery,
+  adminListEateries,
+  adminSaveEatery,
+  adminSetEateryPublished,
+} from "@/lib/domain/admin";
+import { listEateries } from "@/lib/domain/eateries";
+import type { EateryForm } from "@/lib/validation/admin";
+
+const eateryInput = (o: Partial<EateryForm> = {}): EateryForm => ({
+  name: `Test Eatery ${uniq()}`,
+  city: "Kuching",
+  dishes: ["laksa"],
+  priceTier: 2,
+  isSplurge: false,
+  mapsUrl: "https://maps.app.goo.gl/test",
+  notes: "",
+  isPublished: true,
+  ...o,
+});
+
+describe("admin food guide", () => {
+  it("creates, edits, unpublishes (hidden from travellers) and deletes an eatery", async () => {
+    const created = await adminSaveEatery(eateryInput({ name: "Zed Laksa House" }));
+    expect(created).toMatchObject({ name: "Zed Laksa House", city: "Kuching", priceTier: 2, isPublished: true });
+    expect((await adminListEateries()).some((e) => e.id === created.id)).toBe(true);
+    expect((await listEateries({ city: "Kuching" })).some((e) => e.id === created.id)).toBe(true);
+
+    const edited = await adminSaveEatery(eateryInput({ id: created.id, name: "Zed Laksa House", priceTier: 3, notes: "Go early." }));
+    expect(edited).toMatchObject({ id: created.id, slug: created.slug, priceTier: 3, notes: "Go early." });
+
+    await adminSetEateryPublished(created.id, false);
+    expect((await adminGetEatery(created.id))?.isPublished).toBe(false);
+    expect((await listEateries()).some((e) => e.id === created.id)).toBe(false); // hidden from travellers
+    expect((await adminListEateries()).some((e) => e.id === created.id)).toBe(true); // still there for admins
+
+    await adminDeleteEatery(created.id);
+    expect(await adminGetEatery(created.id)).toBeNull();
+  });
+
+  it("the shipped guide is there for admins to manage", async () => {
+    expect((await adminListEateries()).length).toBeGreaterThanOrEqual(30);
+  });
+});
+
+describe("admin attraction must-see rank", () => {
+  it("is saved with the attraction and can be cleared", async () => {
+    const a = await adminSaveAttraction(attractionInput({ featuredRank: 3 }));
+    expect(a.featuredRank).toBe(3);
+    const cleared = await adminSaveAttraction(attractionInput({ id: a.id, name: a.name, featuredRank: null }));
+    expect(cleared.featuredRank).toBeNull();
+    await adminDeleteAttraction(a.id);
+  });
+});

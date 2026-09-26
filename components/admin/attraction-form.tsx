@@ -135,6 +135,21 @@ export function AttractionForm({
           />
           Free entry
         </label>
+        <Field
+          label="Must-see rank"
+          htmlFor="featuredRank"
+          hint="1–5 = the must-see list, 6+ = also great. Leave empty for a regular place. Ranked places show first on Explore."
+        >
+          <Input
+            id="featuredRank"
+            name="featuredRank"
+            type="number"
+            min={1}
+            max={99}
+            className="max-w-28"
+            defaultValue={a?.featuredRank ?? ""}
+          />
+        </Field>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"

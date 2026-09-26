@@ -79,8 +79,17 @@ export interface Attraction {
   tips: string | null;
   categories: CategorySlug[];
   images: ImageRef[];
+  /** 1-5 = "must-see", 6+ = "also great", null = unranked. */
+  featuredRank: number | null;
   isSample: boolean;
   isPublished: boolean;
+}
+
+/** The must-see list is the top five; the rest of the ranked places are "also great". */
+export const MUST_SEE_MAX_RANK = 5;
+
+export function isMustSee(rank: number | null | undefined): boolean {
+  return rank != null && rank <= MUST_SEE_MAX_RANK;
 }
 
 export interface ExperienceAvailability {

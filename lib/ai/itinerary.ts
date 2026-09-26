@@ -13,6 +13,9 @@ import type {
 import { tripNights } from "@/types/trip";
 import { weekdayKey } from "@/lib/format";
 import { parseTripPrompt } from "@/lib/plan/parse-prompt";
+import { describeEatery, estimateMealPerPerson, mealPool, pickMealEatery } from "@/lib/ai/meals";
+import { isMustSee } from "@/types/catalogue";
+import type { Eatery } from "@/types/eatery";
 
 export interface Candidates {
   experiences: Experience[];
@@ -24,6 +27,8 @@ export interface Candidates {
    */
   prefer?: string[];
   reasons?: Record<string, string>;
+  /** The local food guide: meals name a real place from here when it has one that fits. */
+  eateries?: Eatery[];
 }
 
 const CAT_LABEL: Record<CategorySlug, string> = {
@@ -127,7 +132,9 @@ function scoreExp(e: Experience, interests: CategorySlug[]): number {
 }
 function scoreAtt(a: Attraction, interests: CategorySlug[]): number {
   const m = matched(a.categories, interests).length;
-  return (interests.length ? m * 10 : 5) + (a.isFree ? 1 : 0);
+  // the must-see list gets a nudge (rank 1 = +11 ... rank 5 = +7): under one matched interest (+10)
+  const mustSee = isMustSee(a.featuredRank) ? 12 - (a.featuredRank ?? 12) : 0;
+  return (interests.length ? m * 10 : 5) + (a.isFree ? 1 : 0) + mustSee;
 }
 
 const WHY_BY_SLUG: Record<string, string> = {
@@ -228,7 +235,27 @@ function mealItem(
   start: string,
   kind: "lunch" | "dinner",
   trip: TripInput,
+  eatery: Eatery | null = null,
 ): ItineraryItem {
+  if (eatery) {
+    const long = kind === "lunch" ? 60 : 90;
+    return {
+      id: uid(),
+      type: "meal",
+      startTime: start,
+      endTime: addMinutes(start, long),
+      durationMinutes: long,
+      title: `${kind === "lunch" ? "Lunch" : "Dinner"} at ${eatery.name}`,
+      description: describeEatery(eatery),
+      whyRecommended: "From our local food guide.",
+      estimatedCost: estimateMealPerPerson(eatery) * pax(trip),
+      locationLabel: eatery.city,
+      attractionSlug: null,
+      attractionId: null,
+      experienceId: null,
+      bookable: false,
+    };
+  }
   const unit = kind === "lunch" ? 35 : 55;
   const foodie = trip.interests.includes("food");
   return {
@@ -305,11 +332,36 @@ function transportItem(
 
 export function buildItinerary(
   trip: TripInput,
-  candidates: Candidates,
+  candidatesIn: Candidates,
 ): Itinerary {
+  let candidates = candidatesIn;
   const nights = tripNights(trip);
   const budgetTight =
     trip.budgetPerPerson != null && trip.budgetPerPerson < 900;
+
+  // This planner builds Kuching-region trips. Places elsewhere in Sarawak (Miri, Mulu, ...) are in the
+  // catalogue for browsing but must not appear in a Kuching itinerary.
+  const inRegion = (l: { area: string | null } | null | undefined) => !l || !l.area || l.area === "Kuching";
+  candidates = {
+    ...candidates,
+    experiences: candidates.experiences.filter((e) => inRegion(e.location)),
+    attractions: candidates.attractions.filter((a) => inRegion(a.location)),
+  };
+
+  // Meals name a real place from the food guide where one fits; each place is used once before repeating.
+  const eateryPool = mealPool(candidates.eateries ?? []);
+  const usedEateries = new Set<string>();
+  let dayNo = 1;
+  const meal = (start: string, kind: "lunch" | "dinner"): ItineraryItem => {
+    const pick = pickMealEatery(eateryPool, kind, {
+      used: usedEateries,
+      budgetTight,
+      // the last evening of a trip of 3+ days is the one worth a splurge
+      splurge: nights >= 3 && dayNo === nights - 1,
+    });
+    if (pick) usedEateries.add(pick.id);
+    return mealItem(start, kind, trip, pick);
+  };
 
   // Things the traveller asked to leave out, parsed from the free-text notes.
   const avoid = parseTripPrompt(trip.notes ?? "").avoid ?? {
@@ -379,6 +431,7 @@ export function buildItinerary(
   const days: ItineraryDay[] = [];
 
   for (let d = 1; d <= nights; d++) {
+    dayNo = d;
     const date = isoDate(trip.startDate, d - 1);
     const weekday = weekdayKey(date);
     const items: ItineraryItem[] = [];
@@ -439,7 +492,7 @@ export function buildItinerary(
       const hasFoodExp = items.some(
         (i) => i.type === "experience" && catsFor(i).includes("food"),
       );
-      if (!hasFoodExp) addFixed(mealItem("19:00", "dinner", trip));
+      if (!hasFoodExp) addFixed(meal("19:00", "dinner"));
       prevExcursion = false;
       days.push({
         dayNumber: d,
@@ -458,7 +511,7 @@ export function buildItinerary(
         (x) => !attClosedOn(x, weekday) && areaName(x.location) === CITY,
       );
       if (a) addAtt(a, "09:30");
-      addFixed(mealItem("12:30", "lunch", trip));
+      addFixed(meal("12:30", "lunch"));
       days.push({
         dayNumber: d,
         date,
@@ -578,7 +631,7 @@ export function buildItinerary(
     }
 
     // lunch, if the midday window is open
-    if (isFree("12:30", "13:30")) addFixed(mealItem("12:30", "lunch", trip));
+    if (isFree("12:30", "13:30")) addFixed(meal("12:30", "lunch"));
 
     // make sure the traveller eats — unless a food experience covers dinner
     const dinnerCovered = items.some(
@@ -594,7 +647,7 @@ export function buildItinerary(
         75,
       );
       if (slot)
-        addFixed(mealItem(slot, slot >= "15:00" ? "dinner" : "lunch", trip));
+        addFixed(meal(slot, slot >= "15:00" ? "dinner" : "lunch"));
     }
 
     // a packed CITY day earns an evening stop

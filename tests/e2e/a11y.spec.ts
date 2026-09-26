@@ -41,6 +41,8 @@ test("the traveller app's main screens have no detectable accessibility violatio
   await scanAll(page, [
     "/home",
     "/explore",
+    "/explore?tab=attractions",
+    "/explore?tab=food",
     "/explore/experiences/kuching-heritage-street-food-walk",
     "/plan",
     "/trips",
@@ -60,6 +62,8 @@ test("the admin screens have no detectable accessibility violations", async ({ p
     "/admin/experiences",
     "/admin/experiences/new",
     "/admin/attractions",
+    "/admin/eateries",
+    "/admin/eateries/new",
     "/admin/vendors",
     "/admin/vendors/new",
     "/admin/bookings",

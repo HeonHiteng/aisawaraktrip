@@ -586,7 +586,7 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   upload from the device (shrunk to ≤1600 px WebP in the browser → Storage bucket `catalogue`, admin-only
   by RLS) or paste a link; "Make cover"; removing a just-uploaded photo deletes the file. Migration
   `20260926080032_catalogue_bucket_limits` (applied live): catalogue bucket 5 MB JPG/PNG/WebP only (no SVG),
-  avatars 2 MB. Known gap: replacing/removing an already-saved photo leaves the old file in the bucket.
+  avatars 2 MB. Replacing/removing a photo, or deleting its listing, now deletes the unused file (`lib/domain/photo-cleanup.ts`; a file another record still uses, or an external link, is never touched).
 - ✅ **Google Play preparation** — see `docs/play-store.md`: brand mark (`brand/mark.json`) → launcher icons
   (adaptive + round), gradient splash, `npm run android:assets`; release signing + `npm run android:aab`
   (verified end-to-end with a throwaway key: signed APK + AAB); versionCode bumping; `allowBackup=false`;

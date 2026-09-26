@@ -28,6 +28,7 @@ import {
   type ExperienceRow,
 } from "@/lib/domain/mappers/catalogue";
 import type { PaidPayment } from "@/lib/admin-attention";
+import { avatarUrlOf, photoUrlsOf, removeUnusedPhotos } from "@/lib/domain/photo-cleanup";
 import { eateryFormToRow, eateryFromRow } from "@/lib/domain/mappers/eateries";
 import type { Eatery } from "@/types/eatery";
 import { slugify } from "@/lib/validation/admin";
@@ -149,12 +150,14 @@ export async function adminSaveExperience(
     }
     if (input.id && !isUuid(input.id)) throw notUuid("experience");
     const db = await createClient();
+    const before = input.id ? await photoUrlsOf(db, "experience", input.id) : [];
     const { data: id, error } = await db.rpc("admin_save_experience", {
       p: experienceFormToRpc(input),
     });
     if (error) fail(error, "save");
     const saved = await adminGetExperience(id);
     if (!saved) throw new Error("admin save: saved but could not be read back");
+    await removeUnusedPhotos(db, before); // photos the admin took off this listing
     return saved;
   }
 
@@ -233,11 +236,11 @@ export async function adminDeleteExperience(id: string): Promise<void> {
     return;
   }
   if (!isUuid(id)) return;
-  const { error } = await (await createClient())
-    .from("experiences")
-    .delete()
-    .eq("id", id);
+  const db = await createClient();
+  const photos = await photoUrlsOf(db, "experience", id);
+  const { error } = await db.from("experiences").delete().eq("id", id);
   if (error) fail(error, "delete");
+  await removeUnusedPhotos(db, photos);
 }
 
 export async function adminSetExperiencePublished(
@@ -288,13 +291,15 @@ export async function adminGetVendor(id: string): Promise<Vendor | null> {
 export async function adminSaveVendor(input: VendorForm): Promise<Vendor> {
   if (!DEMO_MODE) {
     if (input.id && !isUuid(input.id)) throw notUuid("vendor");
-    const { data: id, error } = await (await createClient()).rpc(
-      "admin_save_vendor",
-      { p: vendorFormToRpc(input) },
-    );
+    const db = await createClient();
+    const before = input.id ? await avatarUrlOf(db, input.id) : [];
+    const { data: id, error } = await db.rpc("admin_save_vendor", {
+      p: vendorFormToRpc(input),
+    });
     if (error) fail(error, "save");
     const saved = await adminGetVendor(id);
     if (!saved) throw new Error("admin save: saved but could not be read back");
+    await removeUnusedPhotos(db, before); // the old logo, if it was replaced or removed
     return saved;
   }
 
@@ -334,11 +339,11 @@ export async function adminDeleteVendor(id: string): Promise<void> {
     return;
   }
   if (!isUuid(id)) return;
-  const { error } = await (await createClient())
-    .from("vendors")
-    .delete()
-    .eq("id", id);
+  const db = await createClient();
+  const logo = await avatarUrlOf(db, id);
+  const { error } = await db.from("vendors").delete().eq("id", id);
   if (error) fail(error, "delete");
+  await removeUnusedPhotos(db, logo);
 }
 
 export async function adminSetVendorVerification(
@@ -410,13 +415,15 @@ export async function adminSaveAttraction(
   if (!DEMO_MODE) {
     if (!isUuid(input.locationId)) throw notUuid("location");
     if (input.id && !isUuid(input.id)) throw notUuid("attraction");
-    const { data: id, error } = await (await createClient()).rpc(
-      "admin_save_attraction",
-      { p: attractionFormToRpc(input) },
-    );
+    const db = await createClient();
+    const before = input.id ? await photoUrlsOf(db, "attraction", input.id) : [];
+    const { data: id, error } = await db.rpc("admin_save_attraction", {
+      p: attractionFormToRpc(input),
+    });
     if (error) fail(error, "save");
     const saved = await adminGetAttraction(id);
     if (!saved) throw new Error("admin save: saved but could not be read back");
+    await removeUnusedPhotos(db, before);
     return saved;
   }
 
@@ -469,11 +476,11 @@ export async function adminDeleteAttraction(id: string): Promise<void> {
     return;
   }
   if (!isUuid(id)) return;
-  const { error } = await (await createClient())
-    .from("attractions")
-    .delete()
-    .eq("id", id);
+  const db = await createClient();
+  const photos = await photoUrlsOf(db, "attraction", id);
+  const { error } = await db.from("attractions").delete().eq("id", id);
   if (error) fail(error, "delete");
+  await removeUnusedPhotos(db, photos);
 }
 
 export async function adminSetAttractionPublished(

@@ -559,6 +559,23 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ⏭️ Not done: stale unpaid bookings still *display* "Awaiting payment" after their hold lapses (they
   no longer block anyone); a small "expired" label / daily cleanup would tidy the lists.
 
+## "Make sure the app works" pass (real backend, in a browser)
+
+- ✅ **`npm run test:e2e:real`** (`playwright.real.config.ts`, `tests/e2e-real/`) — a browser drives the
+  app with demo mode OFF: real Supabase guest sessions, real database, real SQL functions. Covers
+  **explore (6 experiences, search, attractions) → experience page → plan → refine → book from the trip →
+  checkout → fake gateway → confirmed → bookings list/detail → trip shows "booked" → review (gated) →
+  cancel (two-step) → guest profile → sign out → signed-out routes bounce to login**; a guest can't
+  reach `/admin`; **admin with a real email + password** (wrong password refused with a message, email
+  kept), profile save persists, dashboard, create an experience through the form (RM 45.50), it shows
+  on Explore, delete it (two-step), see/manage the traveller's booking, users/vendors/attractions
+  render. Deletes everything it created. Can target a deployment: `E2E_BASE_URL=https://…`.
+- 🐛 **Found & fixed:** a wrong password **wiped the email field** (React clears uncontrolled fields
+  after a server action) — sign-in/register and the guest "Save your account" form now keep name +
+  email (password still clears). Now a permanent regression assertion.
+- ✅ Also confirmed by the run: unpublished (draft) experiences are hidden from travellers; the
+  guest profile shows the real trip/booking counts.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

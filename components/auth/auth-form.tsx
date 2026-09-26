@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,11 @@ export function AuthForm({ mode, action, next }: Props) {
     FormData
   >(continueAsGuest, {});
 
+  // Controlled on purpose: React clears uncontrolled fields after a server action, so a wrong
+  // password would wipe the email too. (The password itself is meant to clear.)
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+
   const isRegister = mode === "register";
   const busy = pending || guestPending;
 
@@ -66,6 +71,8 @@ export function AuthForm({ mode, action, next }: Props) {
               <Input
                 id="fullName"
                 name="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 autoComplete="name"
                 required
                 disabled={busy}
@@ -78,6 +85,8 @@ export function AuthForm({ mode, action, next }: Props) {
               id="email"
               name="email"
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
               required
               disabled={busy}

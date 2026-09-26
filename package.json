@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:live": "vitest run --config vitest.live.config.mts",
     "test:e2e": "playwright test",
+    "test:e2e:real": "playwright test --config playwright.real.config.ts",
     "android:sync": "cap sync android",
     "android:apk": "node scripts/android-apk.mjs",
     "db:push": "supabase db push",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
     upgradeGuestAccount,
     {},
   );
+  // Controlled so a rejected password doesn't wipe the name and email (React resets
+  // uncontrolled fields after a server action).
+  const [fullName, setFullName] = useState(defaultName ?? "");
+  const [email, setEmail] = useState("");
 
   return (
     <form action={formAction} className="space-y-4">
@@ -33,7 +37,8 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
           <Input
             id="up-fullName"
             name="fullName"
-            defaultValue={defaultName}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
             autoComplete="name"
             required
             disabled={pending}
@@ -45,6 +50,8 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
             id="up-email"
             name="email"
             type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             required
             disabled={pending}

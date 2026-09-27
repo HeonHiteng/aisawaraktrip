@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, RefreshCw, Trash2, Users } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { ArrowLeft, CalendarDays, Trash2, Users } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { StatusBadge } from "@/components/common/status-badge";
 import { ConfirmSubmit } from "@/components/common/confirm-submit";
 import { EmptyState } from "@/components/common/empty-state";
 import { DayCard } from "@/components/itinerary/day-card";
+import { DayNav } from "@/components/itinerary/day-nav";
 import { RefineBox } from "@/components/itinerary/refine-box";
+import { RegenerateButton } from "@/components/itinerary/regenerate-button";
 import { TripSnapshot } from "@/components/itinerary/trip-snapshot";
 import { requireUser } from "@/lib/auth";
 import { bookingsForTrip } from "@/lib/domain/bookings";
@@ -121,6 +123,8 @@ export default async function TripDetailPage({
         <>
           <RefineBox tripId={trip.id} />
 
+          <DayNav days={trip.itinerary.days} />
+
           <div className="space-y-4">
             {trip.itinerary.days.map((day) => (
               <DayCard
@@ -132,14 +136,8 @@ export default async function TripDetailPage({
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
-            <form action={regenerateTrip}>
-              <input type="hidden" name="tripId" value={trip.id} />
-              <Button type="submit" variant="outline" size="sm">
-                <RefreshCw className="size-4" />
-                Regenerate whole trip
-              </Button>
-            </form>
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            <RegenerateButton action={regenerateTrip} tripId={trip.id} />
             <Link
               href="/explore"
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}

@@ -15,7 +15,10 @@ export function DayCard({
   const total = dayTotal(day);
 
   return (
-    <section className="rounded-2xl border border-border bg-card shadow-card">
+    <section
+      id={`day-${day.dayNumber}`}
+      className="scroll-mt-20 rounded-2xl border border-border bg-card shadow-card"
+    >
       <header className="flex items-center gap-3 p-4">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
           {day.dayNumber}

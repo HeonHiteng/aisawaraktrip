@@ -92,9 +92,14 @@ never a bare `border-dashed` box.
 confirm row (prompt + `destructive` submit + "Keep it"). No single-tap deletes.
 
 ### Form rows (planner inputs)
-Inside a white card: `flex items-center gap-3 rounded-xl bg-muted px-3 py-2` —
-`icon (text-primary)` + stacked `label (text-[10px] text-muted-foreground)` /
-`value (text-xs font-semibold)` + trailing chevron.
+Built in `components/plan/trip-form.tsx` (`EssentialRow`). Each row: `flex items-center
+gap-3 rounded-xl border px-3 py-2.5` — icon in a `bg-accent text-primary` chip + stacked
+`label (text-[10px] text-muted-foreground)` / `value (text-xs font-semibold)` + a trailing
+chevron that rotates 180° when open. Tapping the row expands its real controls in place
+(CSS `hidden`, never unmounted, so a collapsed row's inputs still post with the form); only
+one row open at a time. A non-interactive row (no chevron) uses the same look for fixed,
+informational values. This is how the AI planner's "trip essentials" (dates, travellers,
+budget, fine-tune) stay a short, scannable stack instead of one long always-open form.
 
 ### Experience card (Phase 3)
 Cover image (16:10) → then padding. Overlays on image: `Verified` badge top-left

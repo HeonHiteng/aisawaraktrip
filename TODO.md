@@ -647,6 +647,27 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
 - ⚠️ Not exercised against Stripe's real servers (no keys here): after adding test keys, book + pay with 4242… once.
 - ⏭️ Refunds stay manual (Stripe dashboard, then mark the booking Refunded). FPX/GrabPay need a Malaysian Stripe account.
 
+## AI planner UX pass (input flow + trip result page)
+
+- ✅ **`/plan` rewritten** (`components/plan/trip-form.tsx`) — the old page was one long always-open
+  form (title, dates, budget ×2 controls, group+pax, 7 interest chips, pace, notes all visible at
+  once), fighting the "AI planner, ~1 minute" promise. Now: "Describe your trip" (with tappable
+  prompt-starter chips, auto-applies on blur, no separate step) → a **"Trip essentials" stack of
+  4 tap-to-expand rows** (Dates / Travellers / Budget / Fine-tune, each a one-line summary that
+  expands in place — the `EssentialRow` pattern, now documented in `docs/design-system.md`) → one
+  CTA. A first-time guest sees the whole flow without scrolling; defaults are good enough to
+  generate immediately, every control is still one tap away. Trip essentials briefly ring-highlights
+  when a prompt is applied, so cause → effect is visible.
+- ✅ **Trip result page**: added `DayNav` (Day 1/2/3… jump pills above the itinerary, hidden for a
+  1-day trip) for orientation on longer trips. **Fixed a real gap**: "Regenerate whole trip" had NO
+  confirmation despite discarding any refining/manual edits (unlike Delete, which already asks
+  twice) — added a neutral (not destructive-red, since it's recoverable) two-tap confirm
+  (`RegenerateButton`).
+- 🧪 Full suite re-verified after the rewrite (hidden accordion rows still post their real values —
+  verified the exact failure mode of conditionally *unmounting* controls, used CSS-hide instead):
+  343 unit/DB, demo E2E 14/14 (incl. the a11y scan of `/plan`), real-backend E2E 4/4.
+- ⏭️ Not done: nothing else queued here — flag anything after trying it.
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

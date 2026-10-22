@@ -19,7 +19,7 @@ import { listEateries } from "@/lib/domain/eateries";
 import { listTrips } from "@/lib/domain/trips";
 import { listBookings } from "@/lib/domain/bookings";
 import { demoCategories } from "@/lib/demo/fixtures";
-import { PROMPT_STARTERS } from "@/lib/plan/starters";
+import { QUICK_STARTS } from "@/lib/plan/starters";
 import { formatDate } from "@/lib/format";
 import { isMustSee } from "@/types/catalogue";
 import { TRIP_STATUS_META } from "@/types/trip";
@@ -62,9 +62,6 @@ export default async function HomePage() {
         <h1 className="text-2xl font-bold tracking-tight">
           {name ? `Hi ${name}` : "Selamat datang"}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Let&apos;s plan your Kuching &amp; Sarawak trip.
-        </p>
       </div>
 
       {/* Planner hero: one tap into the planner, or a quick start that pre-fills it */}
@@ -76,40 +73,33 @@ export default async function HomePage() {
           aria-hidden
           className="pointer-events-none absolute -right-12 -top-16 size-48 rounded-full bg-white/10 blur-2xl"
         />
-        <p className="text-xs font-semibold tracking-widest text-white/70 uppercase">
-          AI trip planner
-        </p>
-        <h2 id="plan-hero" className="mt-1 text-xl font-bold tracking-tight">
-          Tell us your trip in one sentence
+        <h2 id="plan-hero" className="relative flex items-center gap-2 text-xl font-bold tracking-tight">
+          <Sparkles aria-hidden className="size-5" />
+          Plan your trip with AI
         </h2>
-        <p className="mt-1 text-sm text-white/75">
-          You get a day-by-day plan built from real, verified Sarawak places.
-        </p>
 
         <Link
           href="/plan"
-          className="mt-4 flex min-h-12 items-center gap-2.5 rounded-full bg-background py-1.5 pr-1.5 pl-4 text-sm text-muted-foreground shadow-float transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="relative mt-4 flex min-h-12 items-center gap-2.5 rounded-full bg-background py-1.5 pr-1.5 pl-5 text-sm text-muted-foreground shadow-float transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
-          <Sparkles aria-hidden className="size-4 shrink-0 text-primary" />
-          <span className="flex-1 truncate">3 days, couple, food &amp; nature…</span>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-gradient px-3.5 py-2 text-xs font-semibold text-white">
-            Start planning
-            <ArrowRight aria-hidden className="size-3.5" />
+          <span className="flex-1 truncate">Describe your trip…</span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-gradient text-white">
+            <ArrowRight aria-hidden className="size-4" />
+            <span className="sr-only">Start planning</span>
           </span>
         </Link>
 
-        <p className="mt-4 text-xs font-medium text-white/70">Or start from</p>
         <ul
           aria-label="Trip ideas"
-          className="-mx-5 mt-2 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="relative -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {PROMPT_STARTERS.map((s) => (
-            <li key={s} className="shrink-0">
+          {QUICK_STARTS.map(({ label, prompt }) => (
+            <li key={label} className="shrink-0">
               <Link
-                href={`/plan?q=${encodeURIComponent(s)}`}
+                href={`/plan?q=${encodeURIComponent(prompt)}`}
                 className="inline-flex min-h-9 items-center rounded-full border border-white/25 bg-white/10 px-3 text-xs font-medium text-white transition-colors hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
               >
-                {s}
+                {label}
               </Link>
             </li>
           ))}

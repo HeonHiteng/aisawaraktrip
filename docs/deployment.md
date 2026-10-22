@@ -5,6 +5,9 @@
 - **URL:** https://sarawak-trip-planner.vercel.app — Vercel project `sarawak-trip-planner`
   (team `heonhitengs-projects`), connected to the GitHub repo: **every push to `main`
   deploys to production automatically.**
+- **Region:** functions run in Singapore (`sin1`, set in `vercel.json`), next to the database. Without it
+  Vercel runs them in Washington (`iad1`) and every database call crosses the Pacific (~0.8 s each instead
+  of ~0.04 s) — a generated plan took ~9 s that way.
 - **Backend:** Supabase project "ai-sarawak" (`zjlyyeiwrrewrahaqyzq`, ap-southeast-1) — real
   database, guest login, RLS. Demo mode is OFF (`NEXT_PUBLIC_DEMO_MODE=false`).
   Since 2026-10-21 the schema is owned by a separate backend repo (migrations, SQL functions,
@@ -170,12 +173,15 @@ Each does what it is good at; the rules are always underneath.
 
 - **The sentence**: `interpretPrompt` (`app/(app)/plan/actions.ts`) asks Claude and Jev side by side and keeps
   Claude's reading, then Jev's, then the rules'. Asking both at once means a slow Claude never adds its 8 s timeout
-  on top of Jev's. When the plan is generated, the vetoes Claude and Jev read in the sentence are both added to
-  Jev's brief.
+  on top of Jev's. The form sends what that reading ruled out (`promptAvoid`) with the plan, so generating it
+  doesn't read the sentence again; only without one (a regenerate) does Jev read it, alongside its scoring.
+- **Budget**: an amount is the **whole group's** unless the traveller says it's per person ("RM800 each", "pp",
+  "每人", "人均"). Claude only reports the amount as stated and whether it was per person; code divides a total by
+  the head-count (`splitBudget` in `lib/plan/parse-prompt.ts`), or the form divides it by its travellers when the
+  sentence names none.
 - **Model**: `AI_PROMPT_MODEL`, default `claude-sonnet-5-5` with low effort. One reading is ~800 tokens in and
-  ~300–400 out — about half a US cent on Sonnet ($2 / $10 per million tokens), about one cent per generated
-  plan (the sentence is read once on the form and once at generation). `claude-opus-5-5` reads best at about
-  twice that; `claude-haiku-5-5` costs ~0.03 cents. `npm run test:live` prints the real latency.
+  ~300–400 out — about half a US cent per plan on Sonnet ($2 / $10 per million tokens). `claude-opus-5-5` reads
+  best at about twice that; `claude-haiku-5-5` costs ~0.03 cents. `npm run test:live` prints the real latency.
 - **Refusals**: the request opts into the API's server-side fallback (`fallbacks: "default"`), so a refused
   request is re-run on another model; if it still fails the form keeps Jev's or the rules' reading.
 - **Logs**: `[ai] prompt read failed; using Jev / the rules` means users are getting the fallback.

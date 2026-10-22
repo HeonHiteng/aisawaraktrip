@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isRealPhoto } from "@/components/explore/cover-image";
+import { isRealPhoto } from "@/lib/photo-credits";
 
 describe("isRealPhoto", () => {
   it("shows uploaded and owned photos", () => {

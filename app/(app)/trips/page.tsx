@@ -6,13 +6,20 @@ import { TripCard } from "@/components/trips/trip-card";
 import { EmptyState } from "@/components/common/empty-state";
 import { requireUser } from "@/lib/auth";
 import { listTrips } from "@/lib/domain/trips";
+import { listAttractions, listExperiences } from "@/lib/domain/catalogue";
+import { buildPhotoIndex, tripCover } from "@/lib/card-photos";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "My Trips" };
 
 export default async function TripsPage() {
   const user = await requireUser();
-  const trips = await listTrips(user.id);
+  const [trips, attractions, experiences] = await Promise.all([
+    listTrips(user.id),
+    listAttractions(),
+    listExperiences(),
+  ]);
+  const photoIndex = buildPhotoIndex({ attractions, experiences });
 
   return (
     <div className="space-y-5">
@@ -37,7 +44,12 @@ export default async function TripsPage() {
       ) : (
         <div className="space-y-4">
           {trips.map((t, i) => (
-            <TripCard key={t.id} trip={t} featured={i === 0} />
+            <TripCard
+              key={t.id}
+              trip={t}
+              coverUrl={tripCover(t, photoIndex)}
+              featured={i === 0}
+            />
           ))}
         </div>
       )}

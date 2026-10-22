@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   Car,
@@ -23,14 +24,17 @@ const ICON = {
   free_time: Sparkles,
 } as const;
 
+/** `photo`: the place / experience / eatery photo for this stop (lib/card-photos `itemPhoto`). */
 export function ItemRow({
   item,
   tripId,
   booking,
+  photo,
 }: {
   item: ItineraryItem;
   tripId: string;
   booking?: { id: string; status: BookingStatus };
+  photo?: string | null;
 }) {
   const Icon = ICON[item.type];
   const isExp = item.type === "experience";
@@ -56,27 +60,33 @@ export function ItemRow({
       </div>
 
       {/* content */}
-      <div className="min-w-0 flex-1 pb-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="font-medium leading-snug">{item.title}</p>
-          <form action={removeTripItem}>
-            <input type="hidden" name="tripId" value={tripId} />
-            <input type="hidden" name="itemId" value={item.id} />
-            <button
-              type="submit"
-              aria-label="Remove"
-              className="rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/item:opacity-100"
-            >
-              <X className="size-3.5" />
-            </button>
-          </form>
-        </div>
+      <div className="relative min-w-0 flex-1 pb-1">
+        <form action={removeTripItem} className="absolute top-0 right-0">
+          <input type="hidden" name="tripId" value={tripId} />
+          <input type="hidden" name="itemId" value={item.id} />
+          <button
+            type="submit"
+            aria-label="Remove"
+            className="rounded-full p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/item:opacity-100"
+          >
+            <X className="size-3.5" />
+          </button>
+        </form>
 
-        {item.description && (
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {item.description}
-          </p>
-        )}
+        {/* the thumbnail floats so the title and description wrap around it */}
+        <div className="flow-root">
+          {photo && (
+            <span className="relative float-left mt-0.5 mr-3 mb-1 size-14 overflow-hidden rounded-xl bg-muted">
+              <Image src={photo} alt="" fill sizes="56px" className="object-cover" />
+            </span>
+          )}
+          <p className="pr-6 font-medium leading-snug">{item.title}</p>
+          {item.description && (
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {item.description}
+            </p>
+          )}
+        </div>
 
         {item.whyRecommended && (
           <p className="mt-1.5 rounded-lg bg-primary/5 px-2.5 py-1.5 text-xs text-primary/90">

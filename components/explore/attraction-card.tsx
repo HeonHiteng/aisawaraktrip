@@ -34,7 +34,6 @@ export function AttractionCard({
           url={img?.url}
           alt={img?.alt ?? attraction.name}
           category={attraction.categories[0]}
-          seed={attraction.slug}
           priority={priority}
           sizes={compact ? "208px" : CARD_SIZES}
           className="transition-transform duration-500 group-hover:scale-105"

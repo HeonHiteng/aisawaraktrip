@@ -49,7 +49,6 @@ export default async function AdminExperiencesPage() {
                         alt=""
                         sizes="44px"
                         category={e.categories[0]}
-                        seed={e.slug}
                       />
                     </span>
                     <div className="min-w-0">

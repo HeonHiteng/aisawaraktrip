@@ -49,7 +49,6 @@ export default async function AdminAttractionsPage() {
                         alt=""
                         sizes="44px"
                         category={a.categories[0]}
-                        seed={a.slug}
                       />
                     </span>
                     <div className="min-w-0">

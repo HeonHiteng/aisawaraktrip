@@ -2,8 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
-import { allPhotoCredits, DISH_PHOTO, eateryPhoto, photoCredit } from "@/lib/photo-credits";
-import { isRealPhoto } from "@/components/explore/cover-image";
+import {
+  allPhotoCredits,
+  CATEGORY_PHOTO,
+  coverPhoto,
+  DEFAULT_PHOTO,
+  DISH_PHOTO,
+  eateryPhoto,
+  isRealPhoto,
+  photoCredit,
+} from "@/lib/photo-credits";
 
 const onDisk = (url: string) => existsSync(join(process.cwd(), "public", url));
 
@@ -44,7 +52,16 @@ describe("bundled photos", () => {
       expect(onDisk(url!), url).toBe(true);
       expect(photoCredit(url), url).not.toBeNull();
     }
-    expect(eateryPhoto(["fine-dining", "laksa"])).toBe(DISH_PHOTO.laksa);
-    expect(eateryPhoto(["fine-dining"])).toBeNull();
+    expect(eateryPhoto(["umai", "laksa"])).toBe(DISH_PHOTO.umai);
+    expect(eateryPhoto(["something-new", "laksa"])).toBe(DISH_PHOTO.laksa);
+    expect(eateryPhoto(["something-new"])).toBe(CATEGORY_PHOTO.food);
+  });
+
+  it("every card gets a photo: its own, else a stand-in for its category, else the default", () => {
+    expect(coverPhoto("/photos/niah-caves.webp", "nature")).toEqual({ src: "/photos/niah-caves.webp", own: true });
+    expect(coverPhoto(null, "wildlife")).toEqual({ src: CATEGORY_PHOTO.wildlife, own: false });
+    expect(coverPhoto("/demo/fort.jpg", "heritage")).toEqual({ src: CATEGORY_PHOTO.heritage, own: false });
+    expect(coverPhoto(undefined)).toEqual({ src: DEFAULT_PHOTO, own: false });
+    for (const url of [...Object.values(CATEGORY_PHOTO), DEFAULT_PHOTO]) expect(onDisk(url), url).toBe(true);
   });
 });

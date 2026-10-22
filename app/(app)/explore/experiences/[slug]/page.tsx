@@ -66,12 +66,11 @@ export default async function ExperiencePage({
           url={img?.url}
           alt={img?.alt ?? exp.title}
           category={exp.categories[0]}
-          seed={exp.slug}
           priority
         />
         {exp.isSample && <SampleBadge />}
       </div>
-      <PhotoCredit url={img?.url} />
+      <PhotoCredit url={img?.url} category={exp.categories[0]} />
 
       <div className="space-y-2">
         <h1 className="text-2xl font-bold leading-tight">{exp.title}</h1>

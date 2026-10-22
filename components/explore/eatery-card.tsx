@@ -18,7 +18,6 @@ export function EateryCard({ eatery, priority }: { eatery: Eatery; priority?: bo
           url={photo}
           alt={dish ? `${dishLabel(dish)} at ${eatery.name}` : eatery.name}
           category="food"
-          seed={eatery.name}
           sizes={CARD_SIZES}
           priority={priority}
         />

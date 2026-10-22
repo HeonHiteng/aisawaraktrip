@@ -21,7 +21,6 @@ export function ExperienceCard({ experience, priority }: { experience: Experienc
           url={img?.url}
           alt={img?.alt ?? experience.title}
           category={experience.categories[0]}
-          seed={experience.slug}
           priority={priority}
           sizes={CARD_SIZES}
           className="transition-transform duration-500 group-hover:scale-105"

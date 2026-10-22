@@ -675,15 +675,22 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   site too. Replaced with real, freely licensed Wikimedia Commons photos of each place in
   `/public/photos` (8 attractions + 6 experiences + the 4 draft attractions), credited in
   `data/photo-credits.json` → "Photo: …" line on detail pages + `/credits` page.
-- ✅ **Food-guide cards** got a photo of their signature dish (`/public/photos/dishes`, 8 dishes);
-  the 5 "fine dining" places keep branded art (no honest photo exists for them).
+- ✅ **Food-guide cards** got a photo of their signature dish (`/public/photos/dishes`, 9 dishes incl.
+  manok pansoh and a plated "fine dining" shot).
+- ✅ **Every card has a photo** (founder ask): stand-ins per category from the generic `/public/demo`
+  shots for anything without its own (`coverPhoto`); trip cards + trip header show the trip's first
+  place, booking cards the experience, itinerary stops a thumbnail (`lib/card-photos.ts`).
 - ✅ **Home**: planner hero with a search-style pill + quick-start chips (`/plan?q=…` pre-fills the
   planner), "Must-see" + "Popular experiences" swipe rails (`components/common/rail.tsx`), a food-guide
-  row and 4-column interest tiles. Branded fallback art restyled (dark violet + category glow).
+  row and 4-column interest tiles.
+- ✅ **Sign in / register** redesigned: Kuching photo header, form sheet, show/hide password.
+- ✅ **Profile** redesigned: brand identity card with stat tiles, settings-style link groups, admin
+  shortcut for admins.
 - ✅ Demo E2E no longer reuses a server on :3000 (it had silently run against a `dev:real` server).
 - 🚫 **Live DB still points at `/demo/*.jpg`** until the new photos are deployed and the `images`
   rows are updated (`supabase/seed.sql` + `supabase/seed-guide.sql` image sections) — needs the
-  founder's go-ahead (push + production data change).
+  founder's go-ahead (push + production data change). Until then the live cards show category
+  stand-ins (no more wrong landmarks).
 
 ## Blocked / needs the founder
 

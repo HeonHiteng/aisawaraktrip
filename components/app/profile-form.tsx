@@ -40,6 +40,7 @@ export function ProfileForm(initial: Props) {
           <Label htmlFor="fullName">Full name</Label>
           <Input
             id="fullName"
+            className="h-11 rounded-xl px-3.5"
             name="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -51,6 +52,7 @@ export function ProfileForm(initial: Props) {
           <Label htmlFor="phone">Phone</Label>
           <Input
             id="phone"
+            className="h-11 rounded-xl px-3.5"
             name="phone"
             type="tel"
             value={phone}
@@ -66,6 +68,7 @@ export function ProfileForm(initial: Props) {
           <Label htmlFor="country">Country</Label>
           <Input
             id="country"
+            className="h-11 rounded-xl px-3.5"
             name="country"
             value={country}
             onChange={(e) => setCountry(e.target.value)}
@@ -83,9 +86,8 @@ export function ProfileForm(initial: Props) {
 
       <Button
         type="submit"
-        variant="brand"
         size="lg"
-        className="w-full"
+        className="h-11 w-full rounded-full"
         disabled={pending}
       >
         {pending ? "Saving…" : "Save changes"}

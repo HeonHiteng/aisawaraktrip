@@ -68,6 +68,22 @@ values
    'DRAFT — confirm details before publishing. A river cruise to spot Irrawaddy dolphins, crocodiles and monkeys. Entry is around RM10.',
    '11111111-0000-0000-0000-000000000007', 150, 10, 10, false, false, null, false, 8)
 on conflict (slug) do update set featured_rank = excluded.featured_rank;
+
+-- A real photo for each draft (Wikimedia Commons, credited in data/photo-credits.json). Idempotent.
+delete from public.images
+where owner_type = 'attraction'
+  and owner_id in (select id from public.attractions where slug in
+    ('gunung-mulu-national-park', 'niah-caves', 'lambir-hills-national-park', 'kuching-wetlands'));
+
+insert into public.images (owner_type, owner_id, url, alt, is_primary)
+select 'attraction', a.id, v.url, v.alt, true
+from (values
+  ('gunung-mulu-national-park', '/photos/gunung-mulu-national-park.webp', 'The limestone Pinnacles of Gunung Mulu'),
+  ('niah-caves', '/photos/niah-caves.webp', 'The Great Cave at Niah'),
+  ('lambir-hills-national-park', '/photos/lambir-hills-national-park.webp', 'Pantu Waterfall in Lambir Hills National Park'),
+  ('kuching-wetlands', '/photos/kuching-wetlands.webp', 'The Salak River winding through Kuching Wetlands')
+) as v(slug, url, alt)
+join public.attractions a on a.slug = v.slug;
 `;
 
 writeFileSync(join(process.cwd(), "supabase", "seed-guide.sql"), sql);

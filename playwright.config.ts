@@ -25,7 +25,9 @@ export default defineConfig({
   webServer: {
     command: "npm run dev",
     url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    // Never reuse: a server already on :3000 may be `dev:real`, and this suite would then
+    // create guests and trips in the REAL Supabase project. Stop it first (fails loudly if busy).
+    reuseExistingServer: false,
     timeout: 120_000,
     env: { NEXT_PUBLIC_DEMO_MODE: "true" },
   },

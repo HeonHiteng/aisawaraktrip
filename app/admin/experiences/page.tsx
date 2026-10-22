@@ -47,8 +47,8 @@ export default async function AdminExperiencesPage() {
                       <CoverImage
                         url={e.images[0]?.url}
                         alt=""
+                        sizes="44px"
                         category={e.categories[0]}
-                        seed={e.slug}
                       />
                     </span>
                     <div className="min-w-0">

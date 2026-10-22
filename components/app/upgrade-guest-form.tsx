@@ -36,6 +36,7 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
           <Label htmlFor="up-fullName">Full name</Label>
           <Input
             id="up-fullName"
+            className="h-11 rounded-xl px-3.5"
             name="fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
@@ -48,6 +49,7 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
           <Label htmlFor="up-email">Email</Label>
           <Input
             id="up-email"
+            className="h-11 rounded-xl px-3.5"
             name="email"
             type="email"
             value={email}
@@ -61,6 +63,7 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
           <Label htmlFor="up-password">Password</Label>
           <Input
             id="up-password"
+            className="h-11 rounded-xl px-3.5"
             name="password"
             type="password"
             autoComplete="new-password"
@@ -86,7 +89,7 @@ export function UpgradeGuestForm({ defaultName }: { defaultName?: string }) {
         type="submit"
         variant="brand"
         size="lg"
-        className="w-full"
+        className="h-11 w-full rounded-full"
         disabled={pending}
       >
         {pending ? "Creating account…" : "Create account"}

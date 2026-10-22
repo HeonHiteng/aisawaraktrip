@@ -18,6 +18,7 @@ the catalogue and bookings.
 
 - **Next.js 16** (App Router, RSC, Server Actions) + **React 19** + **TypeScript**
 - **Tailwind v4** + **shadcn/ui** (`base-nova` style, `@base-ui/react`)
+- **UI work: use the `ui-app-design` skill** (`.claude/skills/ui-app-design/SKILL.md`) — procedure, shared patterns, UX + a11y checks.
 - **UI design follows `docs/design-system.md`** (from the product proposal): violet→magenta
   brand, dark-violet hero surfaces, pill chips/buttons, geometric sans (Geist), mobile-first.
   Use CSS tokens, never hard-coded hex. `bg-brand-gradient` = hero CTAs only;

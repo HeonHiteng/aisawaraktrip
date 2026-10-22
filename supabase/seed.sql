@@ -206,8 +206,9 @@ where (e.slug, c.slug) in (
 )
 on conflict do nothing;
 
--- ---------- images (bundled demo photos in /public/demo — same as lib/demo/fixtures.ts) ----------
--- Relative URLs are served by the app itself. Real content uploads to Storage later.
+-- ---------- images (real photos of each place in /public/photos — same as lib/demo/fixtures.ts) ----------
+-- From Wikimedia Commons, credited in data/photo-credits.json (listed on /credits). Relative URLs
+-- are served by the app itself; an admin can replace any of them with an upload.
 -- Idempotent: clear the sample photos for these owners, then re-insert.
 delete from public.images
 where owner_id in (
@@ -219,20 +220,20 @@ where owner_id in (
 insert into public.images (owner_type, owner_id, url, alt, is_primary)
 select v.owner_type::public.image_owner, o.id, v.url, v.alt, true
 from (values
-  ('attraction', 'kuching-waterfront',            '/demo/waterfront.jpg',  'Kuching Waterfront at dusk'),
-  ('attraction', 'borneo-cultures-museum',        '/demo/museum.jpg',      'Museum gallery interior'),
-  ('attraction', 'fort-margherita',               '/demo/fort.jpg',        'Historic white fort'),
-  ('attraction', 'tua-pek-kong-temple',           '/demo/temple.jpg',      'Chinese temple'),
-  ('attraction', 'semenggoh-nature-reserve',      '/demo/orangutan.jpg',   'Orangutan in the forest'),
-  ('attraction', 'bako-national-park',            '/demo/proboscis.jpg',   'Proboscis monkey in Bako'),
-  ('attraction', 'sarawak-cultural-village',      '/demo/longhouse.jpg',   'Traditional longhouse'),
-  ('attraction', 'main-bazaar-carpenter-street',  '/demo/chinatown.jpg',   'Heritage shophouse street'),
-  ('experience', 'kuching-heritage-street-food-walk',        '/demo/streetfood.jpg',    'Street food night market'),
-  ('experience', 'sarawak-laksa-kolo-mee-cooking-class',     '/demo/cooking.jpg',       'Hands preparing local food'),
-  ('experience', 'santubong-sunset-wildlife-river-cruise',   '/demo/rivercruise.jpg',   'River cruise at sunset'),
-  ('experience', 'bako-national-park-full-day-trek',         '/demo/jungle-trail.jpg',  'Guided rainforest trail'),
-  ('experience', 'sarawak-kiri-river-kayaking-semadang',     '/demo/kayak.jpg',         'Kayaking on a jungle river'),
-  ('experience', 'annah-rais-longhouse-bidayuh-culture-day', '/demo/rainforest.jpg',    'Jungle waterfall walk near Annah Rais')
+  ('attraction', 'kuching-waterfront',            '/photos/kuching-waterfront.webp', 'The Sarawak River and Kuching Waterfront'),
+  ('attraction', 'borneo-cultures-museum',        '/photos/borneo-cultures-museum.webp', 'The Borneo Cultures Museum building'),
+  ('attraction', 'fort-margherita',               '/photos/fort-margherita.webp', 'Fort Margherita on its hill above the river'),
+  ('attraction', 'tua-pek-kong-temple',           '/photos/tua-pek-kong-temple.webp', 'Tua Pek Kong Temple hung with red lanterns'),
+  ('attraction', 'semenggoh-nature-reserve',      '/photos/semenggoh-nature-reserve.webp', 'An orangutan at Semenggoh Nature Reserve'),
+  ('attraction', 'bako-national-park',            '/photos/bako-national-park.webp', 'A proboscis monkey in Bako National Park'),
+  ('attraction', 'sarawak-cultural-village',      '/photos/sarawak-cultural-village.webp', 'Traditional houses by the lake at Sarawak Cultural Village'),
+  ('attraction', 'main-bazaar-carpenter-street',  '/photos/main-bazaar-carpenter-street.webp', 'The Chinese gate on Carpenter Street'),
+  ('experience', 'kuching-heritage-street-food-walk',        '/photos/street-food-walk.webp', 'A bowl of Sarawak laksa'),
+  ('experience', 'sarawak-laksa-kolo-mee-cooking-class',     '/photos/cooking-class.webp', 'A plate of kolo mee'),
+  ('experience', 'santubong-sunset-wildlife-river-cruise',   '/photos/santubong-river-cruise.webp', 'Mount Santubong seen from the Santubong River'),
+  ('experience', 'bako-national-park-full-day-trek',         '/photos/bako-trek.webp', 'The sea view from Bako''s Lintang Trail'),
+  ('experience', 'sarawak-kiri-river-kayaking-semadang',     '/photos/kiri-river-kayak.webp', 'Kayaks on a sandbank of the Sarawak Kiri River'),
+  ('experience', 'annah-rais-longhouse-bidayuh-culture-day', '/photos/annah-rais-longhouse.webp', 'The bamboo veranda of Annah Rais longhouse')
 ) as v(owner_type, slug, url, alt)
 join (
   select id, slug, 'attraction' as t from public.attractions

@@ -198,7 +198,8 @@ export function PhotoField({
       </p>
       {!canUpload && (
         <p className="text-xs text-muted-foreground">
-          Uploads are off in demo mode — paste a link, or a bundled path like /demo/rainforest.jpg.
+          Uploads are off in demo mode — paste a link to a photo you own. Bundled /demo/ placeholders
+          show as category art on cards, not as photos.
         </p>
       )}
     </div>

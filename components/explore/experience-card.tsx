@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, MapPin, Star } from "lucide-react";
-import { CoverImage } from "@/components/explore/cover-image";
+import { CARD_SIZES, CoverImage } from "@/components/explore/cover-image";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { Avatar } from "@/components/common/avatar";
 import { formatMYR } from "@/lib/format";
@@ -14,15 +14,15 @@ export function ExperienceCard({ experience, priority }: { experience: Experienc
   return (
     <Link
       href={`/explore/experiences/${experience.slug}`}
-      className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float"
+      className="group block h-full overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float"
     >
       <div className="relative h-44 w-full bg-muted">
         <CoverImage
           url={img?.url}
           alt={img?.alt ?? experience.title}
           category={experience.categories[0]}
-          seed={experience.slug}
           priority={priority}
+          sizes={CARD_SIZES}
           className="transition-transform duration-500 group-hover:scale-105"
         />
         {/* legibility scrim */}

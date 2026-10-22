@@ -4,12 +4,18 @@ import { BookingCard } from "@/components/booking/booking-card";
 import { EmptyState } from "@/components/common/empty-state";
 import { requireUser } from "@/lib/auth";
 import { listBookings } from "@/lib/domain/bookings";
+import { listExperiences } from "@/lib/domain/catalogue";
+import { bookingPhoto, buildPhotoIndex } from "@/lib/card-photos";
 
 export const metadata: Metadata = { title: "My Bookings" };
 
 export default async function BookingsPage() {
   const user = await requireUser();
-  const bookings = await listBookings(user.id);
+  const [bookings, experiences] = await Promise.all([
+    listBookings(user.id),
+    listExperiences(),
+  ]);
+  const photoIndex = buildPhotoIndex({ experiences });
 
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = bookings.filter(
@@ -38,7 +44,11 @@ export default async function BookingsPage() {
                 Upcoming
               </h2>
               {upcoming.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCard
+                  key={b.id}
+                  booking={b}
+                  imageUrl={bookingPhoto(b.experienceSlug, photoIndex)}
+                />
               ))}
             </section>
           )}
@@ -48,7 +58,11 @@ export default async function BookingsPage() {
                 Past &amp; cancelled
               </h2>
               {past.map((b) => (
-                <BookingCard key={b.id} booking={b} />
+                <BookingCard
+                  key={b.id}
+                  booking={b}
+                  imageUrl={bookingPhoto(b.experienceSlug, photoIndex)}
+                />
               ))}
             </section>
           )}

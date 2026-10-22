@@ -60,6 +60,14 @@ Dark mode is fully defined; don't hard-code hex — use tokens.
   sticky price+CTA bar with `shadow-[0_-8px_20px_...]`.
 - **`Avatar`** (`components/common/avatar.tsx`): image when a usable src, else
   initials on `bg-accent`.
+- **Rail** (`components/common/rail.tsx`): a titled, horizontally snap-scrolling row of
+  cards (`RailItem`, `w-[17rem]`, narrower for compact cards). Bleeds to the screen edge so
+  the next card peeks in; no visible scrollbar; optional one-line description + "See all".
+  Use it on overview screens (Home) instead of stacking full-width cards; Explore keeps the grid.
+- **Home** (`app/(app)/home/page.tsx`): greeting → `rounded-3xl bg-brand-hero` planner hero
+  (a search-style pill into `/plan` + quick-start chips that open `/plan?q=…` pre-filled) →
+  continue / next-booking rows → "Must-see" rail (compact `AttractionCard`) → "Popular
+  experiences" rail → food-guide row → 4-column interest tiles (`CATEGORY_ICON`).
 
 ## Components
 
@@ -117,9 +125,35 @@ Thumbnail (rounded) + `Day N` bold + subtitle + right-side location + expand che
 
 ## Imagery
 
-Demo photos are remote (Unsplash) for now — configure `next.config.ts`
-`images.remotePatterns` in Phase 3. Real owned assets go to Supabase Storage
-(`catalogue` bucket). Sample rows always show a visible `Sample data` badge.
+**Every card shows a photo, and an item's own photo is always really of it.** Every catalogue
+place and experience has a real photo of it in `/public/photos` (Wikimedia Commons, freely licensed),
+and every food-guide card shows its signature dish from `/public/photos/dishes`
+(`eateryPhoto` in `lib/photo-credits.ts`). Each one is credited in
+`data/photo-credits.json`: a "Photo: author · licence" line under detail heroes
+(`PhotoCredit`) and the full list on `/credits`. New bundled photos need a credit entry
+(`tests/unit/photo-credits.test.ts` enforces it). Owned photos uploaded by an admin go to
+Supabase Storage (`catalogue` bucket) and need no credit.
+
+An item's own photo is used only when it is real (`isRealPhoto`: never Unsplash links or the
+old `/public/demo` files, which show unrelated places). Otherwise `coverPhoto`
+(`lib/photo-credits.ts`) gives a **stand-in** for its category (`CATEGORY_PHOTO`: generic mood
+shots from `/public/demo` such as a forest trail or a plated dish, never a photo of a different
+real landmark; empty alt text), else the riverfront (`DEFAULT_PHOTO`). Cards that point at
+catalogue items borrow their photo (`lib/card-photos.ts`): a trip shows its first place (card,
+and its page header tinted with `bg-brand-hero` behind the title), a booking its experience, an
+itinerary stop its place / experience / eatery as a 56px thumbnail the text wraps around. Pass
+`sizes` with the rendered width. Sample rows always show a visible `Sample data` badge.
+
+### Sign in / register (`app/(auth)/layout.tsx`, `components/auth/auth-form.tsx`)
+A Kuching photo header (brand, tagline, photo credit) with the form on a `rounded-t-3xl` sheet
+that overlaps it on phones; photo left / form right from `lg`. Fields `h-11 rounded-xl`,
+full-width pill buttons, a show/hide toggle on the password, "Continue as guest" as the
+secondary path.
+
+### Profile (`app/(app)/profile/page.tsx`)
+A `bg-brand-hero rounded-3xl` identity card (avatar, name, email, role pill, three tappable stat
+tiles) → details form (or "Save your account" for guests) → settings-style `LinkList` groups
+(icon chip, label, chevron) → Account (sign out, delete).
 
 ## Don't
 

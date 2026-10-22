@@ -7,10 +7,13 @@ export function DayCard({
   day,
   tripId,
   bookingsByExperience,
+  photos = {},
 }: {
   day: ItineraryDay;
   tripId: string;
   bookingsByExperience: Record<string, { id: string; status: BookingStatus }>;
+  /** item id -> photo (lib/card-photos `itemPhoto`) */
+  photos?: Record<string, string | null>;
 }) {
   const total = dayTotal(day);
 
@@ -51,6 +54,7 @@ export function DayCard({
                 key={item.id}
                 item={item}
                 tripId={tripId}
+                photo={photos[item.id]}
                 booking={
                   item.experienceId
                     ? bookingsByExperience[item.experienceId]

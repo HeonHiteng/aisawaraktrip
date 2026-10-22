@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Trash2, Users } from "lucide-react";
@@ -13,6 +14,9 @@ import { RegenerateButton } from "@/components/itinerary/regenerate-button";
 import { TripSnapshot } from "@/components/itinerary/trip-snapshot";
 import { requireUser } from "@/lib/auth";
 import { bookingsForTrip } from "@/lib/domain/bookings";
+import { listAttractions, listExperiences } from "@/lib/domain/catalogue";
+import { listEateries } from "@/lib/domain/eateries";
+import { buildPhotoIndex, itemPhoto, tripCover } from "@/lib/card-photos";
 import { getTrip } from "@/lib/domain/trips";
 import { formatDateRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -23,10 +27,7 @@ import {
   tripNights,
   TRIP_STATUS_META,
 } from "@/types/trip";
-import {
-  deleteTripAction,
-  regenerateTrip,
-} from "@/app/(app)/trips/actions";
+import { deleteTripAction, regenerateTrip } from "@/app/(app)/trips/actions";
 
 // Refining / regenerating calls the AI planner, which can take a while (lib/ai/claude.ts).
 export const maxDuration = 60;
@@ -52,7 +53,17 @@ export default async function TripDetailPage({
   const pax = trip.numAdults + trip.numChildren;
   const estimated = itineraryTotal(trip.itinerary);
 
-  const bookings = await bookingsForTrip(user.id, trip.id);
+  const [bookings, attractions, experiences, eateries] = await Promise.all([
+    bookingsForTrip(user.id, trip.id),
+    listAttractions(),
+    listExperiences(),
+    listEateries(),
+  ]);
+  const photoIndex = buildPhotoIndex({ attractions, experiences, eateries });
+  const photos: Record<string, string | null> = {};
+  for (const day of trip.itinerary?.days ?? []) {
+    for (const item of day.items) photos[item.id] = itemPhoto(item, photoIndex);
+  }
   const bookingsByExperience: Record<
     string,
     { id: string; status: BookingStatus }
@@ -75,40 +86,62 @@ export default async function TripDetailPage({
         My Trips
       </Link>
 
-      <div className="overflow-hidden rounded-2xl bg-brand-hero p-5 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="text-xl font-bold leading-tight">{trip.title}</h1>
-          <StatusBadge
-            label={(TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned).label}
-            tone={(TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned).tone}
-            className="bg-white/15 text-white"
-          />
+      <div className="relative overflow-hidden rounded-3xl bg-brand-hero p-5 text-white">
+        {/* the trip's first place, tinted with the brand hero so the text stays readable */}
+        <Image
+          src={tripCover(trip, photoIndex)}
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 672px) 100vw, 640px"
+          className="object-cover"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-brand-hero opacity-85"
+        />
+        <div className="relative">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-xl font-bold leading-tight">{trip.title}</h1>
+            <StatusBadge
+              label={
+                (TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned)
+                  .label
+              }
+              tone={
+                (TRIP_STATUS_META[trip.status] ?? TRIP_STATUS_META.planned).tone
+              }
+              className="bg-white/15 text-white"
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/75">
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="size-4" />
+              {formatDateRange(trip.startDate, trip.endDate)} · {nights} day
+              {nights === 1 ? "" : "s"}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="size-4" />
+              {pax} {pax === 1 ? "traveller" : "travellers"} · {trip.groupType}
+            </span>
+          </div>
+          {trip.itinerary && (
+            <p className="mt-2 text-xs text-white/70">
+              {trip.itinerary.generatedBy === "ai"
+                ? "AI-generated"
+                : "Edited by you"}
+              {trip.itinerary.version > 1 ? " · revised" : ""}
+            </p>
+          )}
+          {(trip.prompt?.trim() || trip.notes?.trim()) && (
+            <p className="mt-3 border-t border-white/15 pt-3 text-xs text-white/75">
+              <span className="font-semibold text-white/90">
+                You asked for:
+              </span>{" "}
+              {trip.prompt?.trim() || trip.notes?.trim()}
+            </p>
+          )}
         </div>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-white/75">
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="size-4" />
-            {formatDateRange(trip.startDate, trip.endDate)} · {nights} day
-            {nights === 1 ? "" : "s"}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Users className="size-4" />
-            {pax} {pax === 1 ? "traveller" : "travellers"} · {trip.groupType}
-          </span>
-        </div>
-        {trip.itinerary && (
-          <p className="mt-2 text-xs text-white/70">
-            {trip.itinerary.generatedBy === "ai"
-              ? "AI-generated"
-              : "Edited by you"}
-            {trip.itinerary.version > 1 ? " · revised" : ""}
-          </p>
-        )}
-        {(trip.prompt?.trim() || trip.notes?.trim()) && (
-          <p className="mt-3 border-t border-white/15 pt-3 text-xs text-white/75">
-            <span className="font-semibold text-white/90">You asked for:</span>{" "}
-            {trip.prompt?.trim() || trip.notes?.trim()}
-          </p>
-        )}
       </div>
 
       <TripSnapshot
@@ -132,6 +165,7 @@ export default async function TripDetailPage({
                 day={day}
                 tripId={trip.id}
                 bookingsByExperience={bookingsByExperience}
+                photos={photos}
               />
             ))}
           </div>

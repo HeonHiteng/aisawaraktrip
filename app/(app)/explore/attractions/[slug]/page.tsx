@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Clock, MapPin, Ticket } from "lucide-react";
 import { CategoryBadges } from "@/components/explore/category-badges";
 import { CoverImage } from "@/components/explore/cover-image";
+import { PhotoCredit } from "@/components/common/photo-credit";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { MustSeeBadge } from "@/components/common/must-see-badge";
 import { getAttraction } from "@/lib/domain/catalogue";
@@ -48,12 +49,12 @@ export default async function AttractionPage({
           url={img?.url}
           alt={img?.alt ?? att.name}
           category={att.categories[0]}
-          seed={att.slug}
           priority
         />
         <MustSeeBadge rank={att.featuredRank} />
         {att.isSample && <SampleBadge />}
       </div>
+      <PhotoCredit url={img?.url} category={att.categories[0]} />
 
       <div className="space-y-2">
         <h1 className="text-2xl font-bold leading-tight tracking-tight">

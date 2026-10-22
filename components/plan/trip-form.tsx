@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { demoCategories } from "@/lib/demo/fixtures";
 import { parseTripPrompt, type ParsedTrip } from "@/lib/plan/parse-prompt";
+import { PROMPT_STARTERS } from "@/lib/plan/starters";
 import { GeneratingOverlay } from "@/components/plan/generating-overlay";
 import {
   generateTrip,
@@ -49,14 +50,6 @@ const BUDGETS = [
   { value: "3000", label: "Premium", sub: "~RM3,000" },
 ];
 
-/** A few starting points so the free-text box never faces a blank page. */
-const PROMPT_STARTERS = [
-  "3-day food & culture trip for a couple",
-  "Weekend nature escape with kids",
-  "Budget solo adventure, love hiking",
-  "Relaxed family week, no hiking",
-];
-
 type Section = "dates" | "travellers" | "budget" | "fine" | null;
 
 function addDays(iso: string, n: number) {
@@ -84,33 +77,48 @@ function shortDateRange(startIso: string, endIso: string): string {
   return `${sStr} – ${eStr}`;
 }
 
+/** `initialPrompt`: a trip description from a link (Home quick starts, `/plan?q=`), applied on arrival. */
 export function TripForm({
   defaultStart,
   defaultEnd,
+  initialPrompt,
 }: {
   defaultStart: string;
   defaultEnd: string;
+  initialPrompt?: string;
 }) {
   const [state, action, pending] = useActionState<PlanState, FormData>(
     generateTrip,
     {},
   );
 
-  const [prompt, setPrompt] = useState("");
+  // A prompt from the link pre-fills the essentials exactly as typing it here would.
+  const [seed] = useState(() =>
+    initialPrompt ? parseTripPrompt(initialPrompt) : null,
+  );
+  const [prompt, setPrompt] = useState(initialPrompt ?? "");
   const [title, setTitle] = useState("My Sarawak trip");
   const [startDate, setStartDate] = useState(defaultStart);
-  const [endDate, setEndDate] = useState(defaultEnd);
-  const [budget, setBudget] = useState("1500");
-  const [groupType, setGroupType] = useState<GroupType>("couple");
-  const [adults, setAdults] = useState(2);
-  const [children, setChildren] = useState(0);
-  const [interests, setInterests] = useState<Set<CategorySlug>>(
-    new Set(["food", "nature", "culture"]),
+  const [endDate, setEndDate] = useState(
+    seed?.days ? addDays(defaultStart, seed.days - 1) : defaultEnd,
   );
-  const [pace, setPace] = useState<TripPace>("moderate");
+  const [budget, setBudget] = useState(
+    seed?.budgetPerPerson ? String(seed.budgetPerPerson) : "1500",
+  );
+  const [groupType, setGroupType] = useState<GroupType>(
+    seed?.groupType ?? "couple",
+  );
+  const [adults, setAdults] = useState(seed?.numAdults ?? 2);
+  const [children, setChildren] = useState(seed?.numChildren ?? 0);
+  const [interests, setInterests] = useState<Set<CategorySlug>>(
+    new Set(
+      seed?.interests?.length ? seed.interests : ["food", "nature", "culture"],
+    ),
+  );
+  const [pace, setPace] = useState<TripPace>(seed?.pace ?? "moderate");
   const [notes, setNotes] = useState("");
-  const [applied, setApplied] = useState(false);
-  const [justApplied, setJustApplied] = useState(false);
+  const [applied, setApplied] = useState(seed != null);
+  const [justApplied, setJustApplied] = useState(seed != null);
   const [openSection, setOpenSection] = useState<Section>(null);
   const [interpreting, setInterpreting] = useState(false);
   // Only the latest server reading may fill the form: each request (and any edit) bumps this.
@@ -148,6 +156,10 @@ export function TripForm({
     // the rules' reading lands instantly; the server's (Jev, when on) refines it a moment later
     applyParsed(parseTripPrompt(text));
     setApplied(true);
+    interpretOnServer(text);
+  }
+
+  function interpretOnServer(text: string) {
     const t = text.trim();
     if (t.length < 12 || t === lastInterpreted.current) return;
     lastInterpreted.current = t;
@@ -162,6 +174,15 @@ export function TripForm({
         if (id === interpretSeq.current) setInterpreting(false);
       });
   }
+
+  // A prompt from a link was read by the rules on arrival (`seed`); let the server refine it too.
+  const linkedPrompt = useRef(initialPrompt);
+  useEffect(() => {
+    const t = linkedPrompt.current;
+    linkedPrompt.current = undefined; // once, even when an effect runs twice in dev
+    if (t) interpretOnServer(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- arrival only
+  }, []);
 
   function applyStarter(text: string) {
     setPrompt(text);

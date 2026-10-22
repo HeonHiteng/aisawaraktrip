@@ -25,7 +25,8 @@ const blank: TripPromptAnswer = {
   children: null,
   group: null,
   pace: null,
-  budget_per_person_myr: null,
+  budget_myr: null,
+  budget_is_per_person: false,
   interests: [],
   avoid_categories: [],
   avoid_things: [],
@@ -103,14 +104,34 @@ describe("readTripPrompt — the request", () => {
 
 describe("readTripPrompt — the answer", () => {
   it("reads the Chinese description into the form's fields", async () => {
-    const r = await read("5天行程，5个大人，一个小孩，budget rm1000", {
+    const r = await read("5天4夜，5个大人一个小孩，budget在RM1000 / person", {
       days: 5,
       adults: 5,
       children: 1,
       group: "family",
-      budget_per_person_myr: 1000,
+      budget_myr: 1000,
+      budget_is_per_person: true,
     });
     expect(r).toMatchObject({ days: 5, numAdults: 5, numChildren: 1, groupType: "family", budgetPerPerson: 1000 });
+  });
+
+  it("an amount is the group's total unless they said per person; code divides it by the head-count", async () => {
+    // "预算大概rm3000，5个大人，1个9岁小孩": RM3,000 for six people
+    const total = await read("预算大概rm3000，5个大人，1个9岁小孩", { adults: 5, children: 1, budget_myr: 3000 });
+    expect(total).toMatchObject({ budgetPerPerson: 500 });
+    expect(total?.budgetTotal).toBeUndefined();
+
+    const each = await read("每人RM800，4个朋友", { adults: 4, budget_myr: 800, budget_is_per_person: true });
+    expect(each).toMatchObject({ budgetPerPerson: 800 });
+
+    // no head-count anywhere: the form splits it across its own travellers
+    const unknown = await read("budget RM3000 for the trip", { budget_myr: 3000 });
+    expect(unknown?.budgetTotal).toBe(3000);
+    expect(unknown?.budgetPerPerson).toBeUndefined();
+
+    // the prompt tells Claude to state the amount as given, and when it counts as per person
+    expect(PROMPT_SYSTEM).toMatch(/exactly as stated/);
+    expect(PROMPT_SYSTEM).toMatch(/whole group/);
   });
 
   it("keeps a real start date from today up to two years ahead, and drops anything else", async () => {
@@ -122,10 +143,12 @@ describe("readTripPrompt — the answer", () => {
   });
 
   it("clamps numbers to what the form accepts and drops a nonsense budget", async () => {
-    const r = await read("a long trip", { days: 40, adults: 0, children: 99, budget_per_person_myr: -5 });
+    const r = await read("a long trip", { days: 40, adults: 0, children: 99, budget_myr: -5 });
     expect(r).toMatchObject({ days: 14, numAdults: 1, numChildren: 20 });
     expect(r?.budgetPerPerson).toBeUndefined();
-    expect((await read("x", { budget_per_person_myr: 1234.6 }))?.budgetPerPerson).toBe(1235);
+    expect(r?.budgetTotal).toBeUndefined();
+    const pp = await read("x", { budget_myr: 1234.6, budget_is_per_person: true });
+    expect(pp?.budgetPerPerson).toBe(1235);
   });
 
   it("a couple or solo trip without a head-count gets the obvious one", async () => {
@@ -135,7 +158,7 @@ describe("readTripPrompt — the answer", () => {
 
   it("where Claude left a field empty, the rules' reading of the same text stays", async () => {
     const r = await read("5 days, budget RM1200, no shopping", { group: "friends" });
-    expect(r).toMatchObject({ days: 5, budgetPerPerson: 1200, groupType: "friends" });
+    expect(r).toMatchObject({ days: 5, budgetTotal: 1200, groupType: "friends" });
     expect(r?.avoid?.categories).toContain("shopping");
   });
 

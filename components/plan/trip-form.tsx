@@ -103,7 +103,11 @@ export function TripForm({
     seed?.days ? addDays(defaultStart, seed.days - 1) : defaultEnd,
   );
   const [budget, setBudget] = useState(
-    seed?.budgetPerPerson ? String(seed.budgetPerPerson) : "1500",
+    seed?.budgetPerPerson
+      ? String(seed.budgetPerPerson)
+      : seed?.budgetTotal
+        ? String(Math.max(1, Math.round(seed.budgetTotal / ((seed.numAdults ?? 2) + (seed.numChildren ?? 0)))))
+        : "1500",
   );
   const [groupType, setGroupType] = useState<GroupType>(
     seed?.groupType ?? "couple",
@@ -124,6 +128,12 @@ export function TripForm({
   // Only the latest server reading may fill the form: each request (and any edit) bumps this.
   const interpretSeq = useRef(0);
   const lastInterpreted = useRef("");
+  // What the server (Claude / Jev) read the traveller ruling out, and in which sentence. Sent with the
+  // form so generating the plan doesn't ask the AI to read the same sentence again.
+  const [serverAvoid, setServerAvoid] = useState<{
+    text: string;
+    avoid: NonNullable<ParsedTrip["avoid"]>;
+  } | null>(null);
 
   useEffect(() => {
     if (!justApplied) return;
@@ -142,12 +152,15 @@ export function TripForm({
       if (!p.days) setEndDate(addDays(p.startDate, nightsBetween(startDate, endDate)));
     }
     if (p.days) setEndDate(addDays(p.startDate ?? startDate, p.days - 1));
-    if (p.budgetPerPerson) setBudget(String(p.budgetPerPerson));
     if (p.groupType) setGroupType(p.groupType);
-    if (p.numAdults) setAdults(p.numAdults);
-    if (p.numChildren != null) setChildren(p.numChildren);
     // a couple or a solo traveller who mentions no children has none — even if an earlier sentence did
-    else if (p.groupType === "couple" || p.groupType === "solo") setChildren(0);
+    const kids = p.numChildren ?? (p.groupType === "couple" || p.groupType === "solo" ? 0 : children);
+    const grown = p.numAdults ?? adults;
+    if (p.numAdults) setAdults(p.numAdults);
+    setChildren(kids);
+    if (p.budgetPerPerson) setBudget(String(p.budgetPerPerson));
+    // a group total with no head-count in the sentence is split across the travellers on the form
+    else if (p.budgetTotal) setBudget(String(Math.max(1, Math.round(p.budgetTotal / Math.max(1, grown + kids)))));
     if (p.interests?.length) setInterests(new Set(p.interests));
     if (p.pace) setPace(p.pace);
     setJustApplied(true);
@@ -176,7 +189,9 @@ export function TripForm({
     setInterpreting(true);
     interpretPrompt(t)
       .then((r) => {
-        if (id === interpretSeq.current && r.source !== "rules") applyParsed(r.parsed);
+        if (id !== interpretSeq.current || r.source === "rules") return;
+        applyParsed(r.parsed);
+        setServerAvoid({ text: t, avoid: r.parsed.avoid ?? { categories: [], slugs: [] } });
       })
       .catch(() => {}) // the rules' reading stands
       .finally(() => {
@@ -395,6 +410,11 @@ export function TripForm({
                 <Stepper label="Children" value={children} min={0} onChange={setChildren} disabled={pending} />
               </div>
             </EssentialRow>
+            <input
+              type="hidden"
+              name="promptAvoid"
+              value={serverAvoid && serverAvoid.text === prompt.trim() ? JSON.stringify(serverAvoid.avoid) : ""}
+            />
             <input type="hidden" name="numAdults" value={adults} />
             <input type="hidden" name="numChildren" value={children} />
 

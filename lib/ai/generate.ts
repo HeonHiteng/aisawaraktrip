@@ -9,7 +9,7 @@ import {
   type RefineResult,
 } from "@/lib/ai/itinerary";
 import { applyBrief, catalogueSlugs, sanitizeBrief, type Brief } from "@/lib/ai/brief";
-import { aiEnabled, PLANNER_MODEL, readTripPrompt, requestBrief } from "@/lib/ai/claude";
+import { aiEnabled, PLANNER_MODEL, requestBrief } from "@/lib/ai/claude";
 import {
   interpretRefineIntent,
   interpretTripPrompt,
@@ -25,30 +25,34 @@ import type { Itinerary, TripInput } from "@/types/trip";
  *
  * A brief (what to skip, what to rank first — lib/ai/brief.ts) comes from the first planner
  * that answers: Jev scoring each candidate (TYPESAFE_API_KEY), then Claude (ANTHROPIC_API_KEY).
- * What the traveller ruled out in their one-line description ("no boats", "不要爬山") is read by
- * Claude and Jev side by side and added to Jev's brief as vetoes.
+ * What the traveller ruled out in their one-line description ("no boats", "不要爬山") is added to
+ * the brief as vetoes. The plan page has usually read it already (Claude, else Jev — see
+ * `interpretPrompt`) and sends that reading as `promptAvoid`, so no model reads the sentence twice;
+ * without it (a regenerate, or no reading on the page) Jev reads it here alongside its scoring.
  * The deterministic builder then does ALL scheduling and pricing from the database, so no model
  * can introduce a place, a price or a time. With no key, or on any AI error or timeout, the
  * builder runs alone: the planner always works.
  */
-export async function generateItinerary(trip: TripInput): Promise<Itinerary> {
+export async function generateItinerary(
+  trip: TripInput,
+  opts: { promptAvoid?: ParsedTrip["avoid"] | null } = {},
+): Promise<Itinerary> {
   const [experiences, attractions, eateries] = await Promise.all([
     listExperiences(),
     listAttractions(),
     listEateries({ city: "Kuching" }),
   ]);
   const catalogue = { experiences, attractions, eateries };
+  const fromPage: ParsedTrip | null = opts.promptAvoid ? { avoid: opts.promptAvoid } : null;
 
   if (jevEnabled()) {
-    const [brief, fromJev, fromClaude] = await Promise.all([
+    const [brief, fromJev] = await Promise.all([
       requestJevBrief(trip, kuchingRegionOnly(catalogue)),
-      trip.prompt ? interpretTripPrompt(trip.prompt) : null,
-      trip.prompt && aiEnabled() ? readTripPrompt(trip.prompt) : null,
+      !fromPage && trip.prompt ? interpretTripPrompt(trip.prompt) : null,
     ]);
     if (brief) {
-      const vetoed = withPromptVetoes(withPromptVetoes(brief, fromJev, catalogue), fromClaude, catalogue);
       return {
-        ...buildItinerary(trip, applyBrief(catalogue, vetoed)),
+        ...buildItinerary(trip, applyBrief(catalogue, withPromptVetoes(brief, fromPage ?? fromJev, catalogue))),
         model: JEV_MODEL,
       };
     }
@@ -58,7 +62,7 @@ export async function generateItinerary(trip: TripInput): Promise<Itinerary> {
     const brief = await requestBrief(trip, catalogue);
     if (brief) {
       return {
-        ...buildItinerary(trip, applyBrief(catalogue, brief)),
+        ...buildItinerary(trip, applyBrief(catalogue, withPromptVetoes(brief, fromPage, catalogue))),
         model: PLANNER_MODEL,
       };
     }

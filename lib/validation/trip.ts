@@ -49,6 +49,29 @@ export type TripInputParsed = z.infer<typeof tripInputSchema>;
 /** The plan page's one-line trip description, for the interpret action. */
 export const promptSchema = z.string().trim().min(4).max(300);
 
+/**
+ * What the AI already read the traveller ruling out in that sentence, sent back with the plan form
+ * so generating the plan doesn't read it again. It can only take places away (and the brief keeps
+ * only real catalogue slugs), so a tampered value can't add anything.
+ */
+const promptAvoidSchema = z.object({
+  categories: z.array(CATEGORY).max(7),
+  slugs: z.array(z.string().max(80)).max(40),
+});
+
+export type PromptAvoid = z.infer<typeof promptAvoidSchema>;
+
+/** The form's `promptAvoid` field, or null when it's missing or not valid JSON of that shape. */
+export function parsePromptAvoid(raw: unknown): PromptAvoid | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const out = promptAvoidSchema.safeParse(JSON.parse(raw));
+    return out.success ? out.data : null;
+  } catch {
+    return null;
+  }
+}
+
 export const refineSchema = z.object({
   instruction: z.string().trim().min(2, "Say what to change.").max(200),
 });

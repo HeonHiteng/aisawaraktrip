@@ -65,6 +65,11 @@ describe.skipIf(!KEY)("Claude reading the plan page's description (live API)", (
       expect(total!.startDate).toMatch(/^\d{4}-\d{2}-15$/);
       console.log(`[${PROMPT_MODEL}]`, JSON.stringify(total));
 
+      // a bare amount is the group's: RM3,000 for six people
+      const group = await readTripPrompt("我想要sarawak 5天4夜的trip，你能给我推荐吗？预算大概rm3000，5个大人，1个9岁小孩");
+      expect(group).toMatchObject({ days: 5, numAdults: 5, numChildren: 1, budgetPerPerson: 500 });
+      console.log(`[${PROMPT_MODEL}]`, JSON.stringify(group));
+
       const en = await readTripPrompt("Long weekend for two couples, slow pace, love wildlife, skip museums");
       expect(en).toMatchObject({ numAdults: 4, pace: "relaxed" });
       expect(en!.interests).toContain("wildlife");

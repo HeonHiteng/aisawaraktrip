@@ -3,9 +3,33 @@ import { AVOID_SLUGS, cnNumber, parseTripPrompt } from "@/lib/plan/parse-prompt"
 
 describe("parseTripPrompt — Chinese", () => {
   it("reads the descriptions travellers actually typed", () => {
-    const expected = { days: 5, numAdults: 5, numChildren: 1, groupType: "family", budgetPerPerson: 1000 };
-    expect(parseTripPrompt("5天4夜，5个大人一个小孩的trip，budget在RM1000 / person")).toMatchObject(expected);
-    expect(parseTripPrompt("5天行程，5个大人，一个小孩，budget rm1000")).toMatchObject(expected);
+    const party = { days: 5, numAdults: 5, numChildren: 1, groupType: "family" };
+    // "/ person" says per person; a bare amount is the whole group's, so six people share RM1,000
+    expect(parseTripPrompt("5天4夜，5个大人一个小孩的trip，budget在RM1000 / person")).toMatchObject({
+      ...party,
+      budgetPerPerson: 1000,
+    });
+    expect(parseTripPrompt("5天行程，5个大人，一个小孩，budget rm1000")).toMatchObject({ ...party, budgetPerPerson: 167 });
+    // a child's age between the count and the word
+    expect(
+      parseTripPrompt("我想要sarawak 5天4夜的trip，你能给我推荐吗？预算大概rm3000，5个大人，1个9岁小孩"),
+    ).toMatchObject({ ...party, budgetPerPerson: 500 });
+  });
+
+  it("an amount is the group's total unless it's said to be per person", () => {
+    expect(parseTripPrompt("RM800 each, 4 friends")).toMatchObject({ numAdults: 4, budgetPerPerson: 800 });
+    expect(parseTripPrompt("4 friends, RM800 pp").budgetPerPerson).toBe(800);
+    expect(parseTripPrompt("4 friends, RM800 per person").budgetPerPerson).toBe(800);
+    expect(parseTripPrompt("我们4个friends，每人预算800").budgetPerPerson).toBe(800);
+    expect(parseTripPrompt("6 pax including 2 kids, budget RM3000")).toMatchObject({
+      numAdults: 4,
+      numChildren: 2,
+      budgetPerPerson: 500,
+    });
+    // no head-count in the text: handed to the form to split across its travellers
+    const r = parseTripPrompt("cheap trip, budget RM2000");
+    expect(r.budgetTotal).toBe(2000);
+    expect(r.budgetPerPerson).toBeUndefined();
   });
 
   it("counts days, then nights + 1, and ignores 'the second day' and dates", () => {
@@ -55,7 +79,7 @@ describe("parseTripPrompt", () => {
       "3 days in Kuching, RM1,500, couple, interested in food + nature",
     );
     expect(r.days).toBe(3);
-    expect(r.budgetPerPerson).toBe(1500);
+    expect(r.budgetPerPerson).toBe(750); // RM1,500 for the couple
     expect(r.groupType).toBe("couple");
     expect(r.numAdults).toBe(2);
     expect(r.interests).toEqual(expect.arrayContaining(["food", "nature"]));

@@ -33,26 +33,31 @@ function toNumber(raw: string): number {
 const NEGATION =
   /\b(no|not into|without|skip(?:ping)?|avoid(?:ing)?|hate|rather not|don'?t (?:like|want|do)|we don'?t|less)\b/i;
 
+/** Specific places a traveller can rule out by kind ("no boats"), shared with lib/ai/jev.ts. */
+export const AVOID_SLUGS = {
+  boats: [
+    "santubong-sunset-wildlife-river-cruise",
+    "sarawak-kiri-river-kayaking-semadang",
+    "bako-national-park",
+    "bako-national-park-full-day-trek",
+  ],
+  museums: ["borneo-cultures-museum"],
+  temples: ["tua-pek-kong-temple"],
+  cooking: ["sarawak-laksa-kolo-mee-cooking-class"],
+} as const satisfies Record<string, readonly string[]>;
+
 /** Phrase -> what to leave out. Only applied inside a clause that also negates. */
-const AVOID_MAP: { re: RegExp; categories?: CategorySlug[]; slugs?: string[] }[] = [
+const AVOID_MAP: { re: RegExp; categories?: CategorySlug[]; slugs?: readonly string[] }[] = [
   { re: /shopping|souvenirs?|handicrafts?/, categories: ["shopping"] },
   { re: /wildlife|animals?|monkeys?|orang.?utans?/, categories: ["wildlife"] },
   {
     re: /hik(?:e|es|ing)|trek(?:k?ing|s)?|strenuous|long walks?|steep/,
     categories: ["adventure"],
   },
-  { re: /museums?/, slugs: ["borneo-cultures-museum"] },
-  { re: /temples?/, slugs: ["tua-pek-kong-temple"] },
-  {
-    re: /boats?|cruises?|kayak(?:ing)?|water/,
-    slugs: [
-      "santubong-sunset-wildlife-river-cruise",
-      "sarawak-kiri-river-kayaking-semadang",
-      "bako-national-park",
-      "bako-national-park-full-day-trek",
-    ],
-  },
-  { re: /cooking class(?:es)?/, slugs: ["sarawak-laksa-kolo-mee-cooking-class"] },
+  { re: /museums?/, slugs: AVOID_SLUGS.museums },
+  { re: /temples?/, slugs: AVOID_SLUGS.temples },
+  { re: /boats?|cruises?|kayak(?:ing)?|water/, slugs: AVOID_SLUGS.boats },
+  { re: /cooking class(?:es)?/, slugs: AVOID_SLUGS.cooking },
 ];
 
 function parseAvoid(text: string): { categories: CategorySlug[]; slugs: string[] } {

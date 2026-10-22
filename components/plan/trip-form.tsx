@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -19,9 +19,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { demoCategories } from "@/lib/demo/fixtures";
-import { parseTripPrompt } from "@/lib/plan/parse-prompt";
+import { parseTripPrompt, type ParsedTrip } from "@/lib/plan/parse-prompt";
 import { GeneratingOverlay } from "@/components/plan/generating-overlay";
-import { generateTrip, type PlanState } from "@/app/(app)/plan/actions";
+import {
+  generateTrip,
+  interpretPrompt,
+  type PlanState,
+} from "@/app/(app)/plan/actions";
 import type { CategorySlug } from "@/types/catalogue";
 import type { GroupType, TripPace } from "@/types/trip";
 
@@ -108,6 +112,10 @@ export function TripForm({
   const [applied, setApplied] = useState(false);
   const [justApplied, setJustApplied] = useState(false);
   const [openSection, setOpenSection] = useState<Section>(null);
+  const [interpreting, setInterpreting] = useState(false);
+  // Only the latest server reading may fill the form: each request (and any edit) bumps this.
+  const interpretSeq = useRef(0);
+  const lastInterpreted = useRef("");
 
   useEffect(() => {
     if (!justApplied) return;
@@ -119,8 +127,7 @@ export function TripForm({
     setOpenSection((cur) => (cur === s ? null : s));
   }
 
-  function applyPrompt(text: string) {
-    const p = parseTripPrompt(text);
+  function applyParsed(p: ParsedTrip) {
     if (p.days) setEndDate(addDays(startDate, p.days - 1));
     if (p.budgetPerPerson) setBudget(String(p.budgetPerPerson));
     if (p.groupType) setGroupType(p.groupType);
@@ -128,8 +135,32 @@ export function TripForm({
     if (p.numChildren != null) setChildren(p.numChildren);
     if (p.interests?.length) setInterests(new Set(p.interests));
     if (p.pace) setPace(p.pace);
-    setApplied(true);
     setJustApplied(true);
+  }
+
+  /** Drop any reading still in flight (the traveller is editing by hand). */
+  function cancelInterpret() {
+    interpretSeq.current++;
+    setInterpreting(false);
+  }
+
+  function applyPrompt(text: string) {
+    // the rules' reading lands instantly; the server's (Jev, when on) refines it a moment later
+    applyParsed(parseTripPrompt(text));
+    setApplied(true);
+    const t = text.trim();
+    if (t.length < 12 || t === lastInterpreted.current) return;
+    lastInterpreted.current = t;
+    const id = ++interpretSeq.current;
+    setInterpreting(true);
+    interpretPrompt(t)
+      .then((r) => {
+        if (id === interpretSeq.current && r.source === "jev") applyParsed(r.parsed);
+      })
+      .catch(() => {}) // the rules' reading stands
+      .finally(() => {
+        if (id === interpretSeq.current) setInterpreting(false);
+      });
   }
 
   function applyStarter(text: string) {
@@ -185,10 +216,13 @@ export function TripForm({
           </p>
           <Textarea
             aria-label="Describe your trip"
+            name="prompt"
+            maxLength={300}
             value={prompt}
             onChange={(e) => {
               setPrompt(e.target.value);
               setApplied(false);
+              cancelInterpret();
             }}
             onBlur={() => {
               if (!applied && prompt.trim().length >= 4) applyPrompt(prompt);
@@ -228,11 +262,15 @@ export function TripForm({
             >
               Use this
             </Button>
-            {applied && (
-              <span className="text-xs text-primary">
-                ✓ Applied — check the trip essentials below.
-              </span>
-            )}
+            <span aria-live="polite" className="text-xs">
+              {interpreting ? (
+                <span className="text-muted-foreground">Interpreting…</span>
+              ) : applied ? (
+                <span className="text-primary">
+                  ✓ Applied — check the trip essentials below.
+                </span>
+              ) : null}
+            </span>
           </div>
         </div>
 
@@ -244,6 +282,11 @@ export function TripForm({
           </p>
 
           <div
+            onChangeCapture={cancelInterpret}
+            onClickCapture={(e) => {
+              // opening a row isn't an edit; pressing a chip, preset or stepper is
+              if (!(e.target as HTMLElement).closest("[aria-expanded]")) cancelInterpret();
+            }}
             className={cn(
               "mt-2.5 space-y-2 rounded-2xl transition-shadow",
               justApplied && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { TripForm } from "@/components/plan/trip-form";
+import { MAX_LINK_PROMPT } from "@/lib/plan/starters";
 
 export const metadata: Metadata = { title: "Plan a trip" };
 
@@ -12,7 +13,14 @@ function isoIn(days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export default function PlanPage() {
+export default async function PlanPage({ searchParams }: PageProps<"/plan">) {
+  const { q } = await searchParams;
+  // `?q=` pre-fills the planner (Home quick starts). Only text, trimmed and capped; the form re-parses it.
+  const initialPrompt =
+    typeof q === "string" && q.trim()
+      ? q.trim().slice(0, MAX_LINK_PROMPT)
+      : undefined;
+
   return (
     <div className="space-y-5">
       <div>
@@ -21,7 +29,11 @@ export default function PlanPage() {
           A personalized Kuching itinerary in about a minute.
         </p>
       </div>
-      <TripForm defaultStart={isoIn(21)} defaultEnd={isoIn(23)} />
+      <TripForm
+        defaultStart={isoIn(21)}
+        defaultEnd={isoIn(23)}
+        initialPrompt={initialPrompt}
+      />
     </div>
   );
 }

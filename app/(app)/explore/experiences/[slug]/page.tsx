@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { CoverImage } from "@/components/explore/cover-image";
+import { PhotoCredit } from "@/components/common/photo-credit";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { Avatar } from "@/components/common/avatar";
 import { CategoryBadges } from "@/components/explore/category-badges";
@@ -70,6 +71,7 @@ export default async function ExperiencePage({
         />
         {exp.isSample && <SampleBadge />}
       </div>
+      <PhotoCredit url={img?.url} />
 
       <div className="space-y-2">
         <h1 className="text-2xl font-bold leading-tight">{exp.title}</h1>

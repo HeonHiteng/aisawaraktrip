@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
-import { CoverImage } from "@/components/explore/cover-image";
+import { CARD_SIZES, CoverImage } from "@/components/explore/cover-image";
 import { MustSeeBadge } from "@/components/common/must-see-badge";
 import { SampleBadge } from "@/components/common/sample-badge";
 import { formatDuration, formatMYR } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Attraction } from "@/types/catalogue";
 
 function price(a: Attraction) {
@@ -12,20 +13,30 @@ function price(a: Attraction) {
   return `${formatMYR(a.priceMin)}–${formatMYR(a.priceMax)}`;
 }
 
-export function AttractionCard({ attraction, priority }: { attraction: Attraction; priority?: boolean }) {
+/** `compact`: a shorter photo and no summary, for carousels (Home "Must-see" rail). */
+export function AttractionCard({
+  attraction,
+  priority,
+  compact,
+}: {
+  attraction: Attraction;
+  priority?: boolean;
+  compact?: boolean;
+}) {
   const img = attraction.images[0];
   return (
     <Link
       href={`/explore/attractions/${attraction.slug}`}
-      className="group block overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float"
+      className="group block h-full overflow-hidden rounded-2xl border border-border bg-card shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-float"
     >
-      <div className="relative h-44 w-full bg-muted">
+      <div className={cn("relative w-full bg-muted", compact ? "h-32" : "h-44")}>
         <CoverImage
           url={img?.url}
           alt={img?.alt ?? attraction.name}
           category={attraction.categories[0]}
           seed={attraction.slug}
           priority={priority}
+          sizes={compact ? "208px" : CARD_SIZES}
           className="transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />
@@ -35,8 +46,8 @@ export function AttractionCard({ attraction, priority }: { attraction: Attractio
         <MustSeeBadge rank={attraction.featuredRank} />
         {attraction.isSample && <SampleBadge />}
       </div>
-      <div className="space-y-2.5 p-4">
-        <h3 className="line-clamp-2 font-semibold leading-snug">
+      <div className={cn("space-y-2.5", compact ? "p-3" : "p-4")}>
+        <h3 className={cn("line-clamp-2 font-semibold leading-snug", compact && "text-sm")}>
           {attraction.name}
         </h3>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -49,9 +60,11 @@ export function AttractionCard({ attraction, priority }: { attraction: Attractio
             {formatDuration(attraction.avgVisitMinutes)}
           </span>
         </div>
-        <p className="line-clamp-2 text-sm text-muted-foreground">
-          {attraction.summary}
-        </p>
+        {!compact && (
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {attraction.summary}
+          </p>
+        )}
       </div>
     </Link>
   );

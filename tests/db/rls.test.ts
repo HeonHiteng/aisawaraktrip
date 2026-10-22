@@ -77,11 +77,11 @@ describe("schema", () => {
     expect(v.rows[0].n).toBe(5);
   });
 
-  it("gives every attraction and experience one bundled demo photo, and re-seeding doesn't duplicate", async () => {
+  it("gives every attraction and experience one real photo, and re-seeding doesn't duplicate", async () => {
     const count = async () =>
       (
         await db.query<{ n: number; bad: number }>(
-          `select count(*)::int as n, count(*) filter (where url not like '/demo/%')::int as bad from public.images`,
+          `select count(*)::int as n, count(*) filter (where url not like '/photos/%')::int as bad from public.images`,
         )
       ).rows[0];
     expect(await count()).toEqual({ n: 14, bad: 0 });

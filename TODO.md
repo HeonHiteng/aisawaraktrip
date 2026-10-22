@@ -668,6 +668,23 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   343 unit/DB, demo E2E 14/14 (incl. the a11y scan of `/plan`), real-backend E2E 4/4.
 - ⏭️ Not done: nothing else queued here — flag anything after trying it.
 
+## Home redesign + real photos (Oct 2026)
+
+- ✅ **Wrong photos fixed**: the bundled `/public/demo` set showed unrelated places (Taj Mahal as
+  Fort Margherita, Sydney Opera House as a longhouse, a Lego car as a proboscis monkey) — on the live
+  site too. Replaced with real, freely licensed Wikimedia Commons photos of each place in
+  `/public/photos` (8 attractions + 6 experiences + the 4 draft attractions), credited in
+  `data/photo-credits.json` → "Photo: …" line on detail pages + `/credits` page.
+- ✅ **Food-guide cards** got a photo of their signature dish (`/public/photos/dishes`, 8 dishes);
+  the 5 "fine dining" places keep branded art (no honest photo exists for them).
+- ✅ **Home**: planner hero with a search-style pill + quick-start chips (`/plan?q=…` pre-fills the
+  planner), "Must-see" + "Popular experiences" swipe rails (`components/common/rail.tsx`), a food-guide
+  row and 4-column interest tiles. Branded fallback art restyled (dark violet + category glow).
+- ✅ Demo E2E no longer reuses a server on :3000 (it had silently run against a `dev:real` server).
+- 🚫 **Live DB still points at `/demo/*.jpg`** until the new photos are deployed and the `images`
+  rows are updated (`supabase/seed.sql` + `supabase/seed-guide.sql` image sections) — needs the
+  founder's go-ahead (push + production data change).
+
 ## Blocked / needs the founder
 
 - 🚫 **Payment gateway (live)** — needs SSM business reg + bank account + gateway approval. Build proceeds on `mock` / sandbox.

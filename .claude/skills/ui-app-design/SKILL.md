@@ -67,6 +67,9 @@ first UI change in a session. This skill tells you how to apply it; it does not 
 | Must-see places | `components/common/must-see-badge.tsx` |
 | Admin form fields | `components/admin/field.tsx`; photos via `components/admin/photo-field.tsx` |
 | Long page with sections | Jump pills like `components/itinerary/day-nav.tsx` |
+| A row of cards on an overview screen | `components/common/rail.tsx` (`Rail` + `RailItem`), not a stack of full-width cards |
+| Card photo | `CoverImage`; only real photos of the place (`isRealPhoto`), never stock look-alikes |
+| Category icon | `components/explore/category-icon.ts` (`CATEGORY_ICON`) |
 
 ## UX rules for flows and forms
 

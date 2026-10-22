@@ -47,6 +47,7 @@ export default async function AdminAttractionsPage() {
                       <CoverImage
                         url={a.images[0]?.url}
                         alt=""
+                        sizes="44px"
                         category={a.categories[0]}
                         seed={a.slug}
                       />

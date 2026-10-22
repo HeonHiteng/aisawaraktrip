@@ -79,7 +79,7 @@ export default async function ExplorePage({
               ? attractions.map((a, i) => (
                   <AttractionCard key={a.id} attraction={a} priority={i === 0} />
                 ))
-              : eateries.map((e) => <EateryCard key={e.id} eatery={e} />)}
+              : eateries.map((e, i) => <EateryCard key={e.id} eatery={e} priority={i === 0} />)}
         </div>
       )}
     </div>

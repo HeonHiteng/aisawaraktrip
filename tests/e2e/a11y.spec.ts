@@ -7,6 +7,10 @@ import { expect, test, type Page } from "@playwright/test";
  * it doesn't replace trying the app with a screen reader.
  */
 
+// Each test scans ~10 screens and waits for network idle on each; on a cold dev server every
+// catalogue photo is resized on first request (seconds each), so allow more than the default.
+test.describe.configure({ timeout: 300_000 });
+
 /** Scan a screen; returns a readable list of problems (empty = clean). */
 async function scan(page: Page, path: string): Promise<string[]> {
   await page.goto(path);

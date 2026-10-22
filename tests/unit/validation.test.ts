@@ -36,6 +36,13 @@ describe("tripInputSchema", () => {
     ).toBe(false);
   });
 
+  it("keeps a prompt up to 300 chars, and nulls a missing or over-long one", () => {
+    expect(tripInputSchema.parse({ ...base, prompt: "  no hiking  " }).prompt).toBe("no hiking");
+    expect(tripInputSchema.parse({ ...base, prompt: "x".repeat(300) }).prompt).toHaveLength(300);
+    expect(tripInputSchema.parse({ ...base, prompt: "x".repeat(301) }).prompt).toBeNull();
+    expect(tripInputSchema.parse(base).prompt).toBeNull();
+  });
+
   it("requires at least one adult", () => {
     expect(
       tripInputSchema.safeParse({ ...base, numAdults: "0" }).success,

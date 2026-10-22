@@ -381,6 +381,9 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   `supabase db push` stays consistent), seed loaded (7 categories · 5 locations ·
   8 attractions · 5 vendors · 6 experiences · joins · images · rating baseline · avatars).
   17 tables, RLS on every one.
+- ➡️ **Moved 2026-10-21** to Supabase project "ai-sarawak" (`zjlyyeiwrrewrahaqyzq`,
+  ap-southeast-1); the project above is no longer used. Schema changes now happen in the
+  separate backend repo and are mirrored into `supabase/`.
 - ✅ **Migrations tested before touching the project.** `tests/db/` runs every migration +
   seed on an in-process Postgres (PGlite; Supabase roles / `auth.uid()` / default grants
   stubbed) — 21 tests: schema, catalogue visibility, role protection, cross-user
@@ -613,8 +616,19 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   it can't invent a place/price/time. Vetoes always win; a brief can't empty the catalogue; any error/timeout/no
   key => the deterministic planner. Traveller notes go in as quoted data with an injection-resistant system prompt.
 - ✅ Refine: rules first; only if they can't map the request does Haiku rephrase it into a command the rules run.
+  (Superseded: the Haiku rewrite was removed when Jev took over reading edit requests — see below.)
 - ✅ 24 new unit tests (fake client) + a live test that skips without a key.
 - ⚠️ Not verified against the real API (no key here): run `npm run test:live` after adding one.
+
+## Jev planner (TypeSafe System One, built, dormant until a key)
+
+- ✅ `lib/ai/jev.ts`: reads the plan-page sentence (form fills instantly from the rules, then Jev refines it),
+  reads edit requests into a `RefineIntent`, and scores each Kuching-region candidate (fit + conflict) into the
+  same brief Claude returns. Order Jev → Claude → rules; 8 s timeout; off without `TYPESAFE_API_KEY` or in demo mode.
+- ✅ `trips.prompt` (backend migration `20261022100001`, mirrored here): the sentence is stored and vetoes like the
+  notes; it survives regenerate / edit (`tripInputOf`).
+- ✅ Haiku edit rewrite removed (rules → Jev → rules is enough). Unit tests with a fake client + `tests/live/jev.live.test.ts`.
+- ⚠️ Not verified against the real API until a key is in `.env.local`: run `npm run test:live`.
 
 ## Government guide: must-see + local food guide (free, no paid services)
 

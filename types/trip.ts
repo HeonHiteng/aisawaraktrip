@@ -36,6 +36,8 @@ export interface TripInput {
   interests: CategorySlug[];
   pace: TripPace;
   notes: string | null;
+  /** The one-line description typed on the plan page, verbatim (<= 300 chars). */
+  prompt?: string | null;
 }
 
 export type ItineraryItemType =

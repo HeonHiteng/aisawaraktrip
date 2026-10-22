@@ -22,6 +22,7 @@ const trip = (over: Record<string, unknown> = {}) => ({
   interests: ["food", "culture"],
   pace: "moderate",
   notes: "no museums",
+  prompt: "3 days, couple, into food and nature",
   userId: "00000000-0000-0000-0000-000000000000", // must be ignored — identity comes from the JWT
   ...over,
 });
@@ -126,7 +127,7 @@ describe("create_trip", () => {
   it("saves the trip, itinerary v1, days and items in order — owned by the caller, not the payload", async () => {
     const id = await createTrip(A());
     const t = await db.query(
-      `select user_id, status, budget_total::text, interests, notes from public.trips where id = $1`,
+      `select user_id, status, budget_total::text, interests, notes, prompt from public.trips where id = $1`,
       [id],
     );
     expect(t.rows[0]).toEqual({
@@ -135,6 +136,7 @@ describe("create_trip", () => {
       budget_total: "3000.00",
       interests: ["food", "culture"],
       notes: "no museums",
+      prompt: "3 days, couple, into food and nature",
     });
 
     const v = await db.query(
@@ -184,6 +186,18 @@ describe("create_trip", () => {
       createTrip(A(), trip(), itinerary(oneDay([item(), badItem()]))),
     ).rejects.toThrow(/itinerary_items_attraction_fk|violates check/i);
     expect(await count()).toBe(before);
+  });
+
+  it("stores an empty prompt as null", async () => {
+    const id = await createTrip(A(), trip({ prompt: "" }));
+    const t = await db.query(`select prompt from public.trips where id = $1`, [id]);
+    expect(t.rows[0]).toEqual({ prompt: null });
+  });
+
+  it("refuses a prompt over 300 characters", async () => {
+    await expect(createTrip(A(), trip({ prompt: "x".repeat(301) }))).rejects.toThrow(
+      /trips_prompt_len|violates check/i,
+    );
   });
 });
 

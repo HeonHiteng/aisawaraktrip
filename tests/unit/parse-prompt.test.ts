@@ -63,4 +63,21 @@ describe("parseTripPrompt", () => {
     const r = parseTripPrompt("relaxed trip, not into shopping or markets");
     expect(r.avoid?.categories).toContain("shopping");
   });
+
+  it("counts the writer plus the people they name", () => {
+    const parents = parseTripPrompt("5 days with my parents, love food and culture, no boats");
+    expect(parents).toMatchObject({ groupType: "family", numAdults: 3 });
+    // the spouse and both of her parents: an older generation makes it a family trip
+    expect(parseTripPrompt("with my wife's parents and our toddler")).toMatchObject({
+      groupType: "family",
+      numAdults: 4,
+    });
+    expect(parseTripPrompt("taking my mum and dad")).toMatchObject({ numAdults: 3 });
+    expect(parseTripPrompt("me, my husband and my mother")).toMatchObject({ groupType: "family", numAdults: 3 });
+    expect(parseTripPrompt("honeymoon with my wife")).toMatchObject({ groupType: "couple", numAdults: 2 });
+  });
+
+  it("an explicit adult count wins over the people named", () => {
+    expect(parseTripPrompt("with my parents, 4 adults").numAdults).toBe(4);
+  });
 });

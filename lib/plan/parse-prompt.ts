@@ -33,26 +33,31 @@ function toNumber(raw: string): number {
 const NEGATION =
   /\b(no|not into|without|skip(?:ping)?|avoid(?:ing)?|hate|rather not|don'?t (?:like|want|do)|we don'?t|less)\b/i;
 
+/** Specific places a traveller can rule out by kind ("no boats"), shared with lib/ai/jev.ts. */
+export const AVOID_SLUGS = {
+  boats: [
+    "santubong-sunset-wildlife-river-cruise",
+    "sarawak-kiri-river-kayaking-semadang",
+    "bako-national-park",
+    "bako-national-park-full-day-trek",
+  ],
+  museums: ["borneo-cultures-museum"],
+  temples: ["tua-pek-kong-temple"],
+  cooking: ["sarawak-laksa-kolo-mee-cooking-class"],
+} as const satisfies Record<string, readonly string[]>;
+
 /** Phrase -> what to leave out. Only applied inside a clause that also negates. */
-const AVOID_MAP: { re: RegExp; categories?: CategorySlug[]; slugs?: string[] }[] = [
+const AVOID_MAP: { re: RegExp; categories?: CategorySlug[]; slugs?: readonly string[] }[] = [
   { re: /shopping|souvenirs?|handicrafts?/, categories: ["shopping"] },
   { re: /wildlife|animals?|monkeys?|orang.?utans?/, categories: ["wildlife"] },
   {
     re: /hik(?:e|es|ing)|trek(?:k?ing|s)?|strenuous|long walks?|steep/,
     categories: ["adventure"],
   },
-  { re: /museums?/, slugs: ["borneo-cultures-museum"] },
-  { re: /temples?/, slugs: ["tua-pek-kong-temple"] },
-  {
-    re: /boats?|cruises?|kayak(?:ing)?|water/,
-    slugs: [
-      "santubong-sunset-wildlife-river-cruise",
-      "sarawak-kiri-river-kayaking-semadang",
-      "bako-national-park",
-      "bako-national-park-full-day-trek",
-    ],
-  },
-  { re: /cooking class(?:es)?/, slugs: ["sarawak-laksa-kolo-mee-cooking-class"] },
+  { re: /museums?/, slugs: AVOID_SLUGS.museums },
+  { re: /temples?/, slugs: AVOID_SLUGS.temples },
+  { re: /boats?|cruises?|kayak(?:ing)?|water/, slugs: AVOID_SLUGS.boats },
+  { re: /cooking class(?:es)?/, slugs: AVOID_SLUGS.cooking },
 ];
 
 function parseAvoid(text: string): { categories: CategorySlug[]; slugs: string[] } {
@@ -67,6 +72,24 @@ function parseAvoid(text: string): { categories: CategorySlug[]; slugs: string[]
     }
   }
   return { categories: [...categories], slugs: [...slugs] };
+}
+
+const SPOUSE = /\bmy (?:wife|husband|partner|girlfriend|boyfriend)\b/;
+/** Two people at once: "my parents", "my wife's parents", "mum and dad", "in-laws". */
+const ELDER_PAIRS =
+  /\b(?:my (?:(?:wife|husband|partner|girlfriend|boyfriend)'?s )?(?:parents|folks|grandparents)|(?:mum|mom|mother) and (?:dad|father)|in-?laws)\b/g;
+const ELDER_ONE = /\bmy (?:mum|mom|mother|dad|father|grandma|grandmother|grandpa|grandfather)\b/g;
+
+/**
+ * Adults named beside the writer ("with my parents" = 3: me + two). The writer counts as one.
+ * `elders` = an older generation is coming, which makes it a family trip even with a spouse along.
+ */
+function partyOf(t: string): { adults: number; elders: boolean } | null {
+  const pairs = t.match(ELDER_PAIRS)?.length ?? 0;
+  const ones = t.replace(ELDER_PAIRS, " ").match(ELDER_ONE)?.length ?? 0;
+  const spouse = SPOUSE.test(t) ? 1 : 0;
+  if (!pairs && !ones && !spouse) return null;
+  return { adults: Math.min(20, 1 + spouse + 2 * pairs + ones), elders: pairs + ones > 0 };
 }
 
 export function parseTripPrompt(text: string): ParsedTrip {
@@ -93,7 +116,12 @@ export function parseTripPrompt(text: string): ParsedTrip {
   const kids = t.match(/(\d+)\s*(?:kids?|child(?:ren)?)/);
   if (kids) out.numChildren = Math.min(20, parseInt(kids[1], 10));
 
-  if (/\b(couple|honeymoon|partner|girlfriend|boyfriend|wife|husband|two of us)\b/.test(t)) {
+  const party = partyOf(t);
+  if (party && !adults) out.numAdults = party.adults;
+
+  if (party?.elders) {
+    out.groupType = "family";
+  } else if (/\b(couple|honeymoon|partner|girlfriend|boyfriend|wife|husband|two of us)\b/.test(t)) {
     out.groupType = "couple";
     out.numAdults ??= 2;
   } else if (/\b(family|kids?|children|parents|grandparents)\b/.test(t)) {

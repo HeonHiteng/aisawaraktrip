@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { catalogueSlugs } from "@/lib/ai/brief";
-import { interpretRefinement, PLANNER_MODEL, requestBrief } from "@/lib/ai/claude";
+import { PLANNER_MODEL, requestBrief } from "@/lib/ai/claude";
 import { buildItinerary } from "@/lib/ai/itinerary";
 import { applyBrief } from "@/lib/ai/brief";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
@@ -45,15 +45,5 @@ describe.skipIf(!KEY)("Claude planner (live API)", () => {
       expect(itinerary.days.flatMap((d) => d.items).length).toBeGreaterThan(3);
     },
     60_000,
-  );
-
-  it(
-    "rephrases a free-text edit into a command, or declines",
-    async () => {
-      const cmd = await interpretRefinement("the second day is costing too much for us", 3);
-      console.log("refine ->", cmd);
-      expect(cmd === null || /cheap|day/i.test(cmd)).toBe(true);
-    },
-    30_000,
   );
 });

@@ -86,8 +86,9 @@ Collected, all **encrypted in transit**, users can **request deletion** (in-app 
 | Payment info | **Depends on the final gateway** — card details are entered on the gateway's page and never stored by us; declare as handled by the payment provider once you've chosen it | Payment provider | Payments | — |
 | App activity / crash logs | Only if you add analytics | — | — | — |
 
-Trip inputs (dates, budget, interests) go to the AI provider to build the itinerary — declare under
-*Other user-generated content / app activity → shared with service providers* once the Claude
+Trip inputs (dates, budget, interests, the trip description and notes) and edit requests go to the
+AI providers (Anthropic Claude, TypeSafe Jev) to build the itinerary — declare under
+*Other user-generated content / app activity → shared with service providers* once either AI
 planner is switched on.
 
 ## 4. Before you press "Publish"

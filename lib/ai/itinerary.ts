@@ -143,7 +143,7 @@ const WHY_BY_SLUG: Record<string, string> = {
   "borneo-cultures-museum":
     "The best single primer on Sarawak's peoples and rainforest before you head out of town.",
   "fort-margherita":
-    "A short sampan crossing to the Brooke-era fort — history plus rooftop views of the old town.",
+    "Over the Darul Hana Bridge to the Brooke-era fort — history plus rooftop views of the old town.",
   "tua-pek-kong-temple":
     "Kuching's oldest Chinese temple — a five-minute stop that anchors the old town.",
   "semenggoh-nature-reserve":
@@ -330,23 +330,27 @@ function transportItem(
 
 // ---- generator ----
 
+/**
+ * This planner builds Kuching-region trips. Places elsewhere in Sarawak (Miri, Mulu, ...) are in the
+ * catalogue for browsing but must not appear in a Kuching itinerary.
+ */
+export function kuchingRegionOnly<T extends Pick<Candidates, "experiences" | "attractions">>(c: T): T {
+  const inRegion = (l: { area: string | null } | null | undefined) => !l || !l.area || l.area === "Kuching";
+  return {
+    ...c,
+    experiences: c.experiences.filter((e) => inRegion(e.location)),
+    attractions: c.attractions.filter((a) => inRegion(a.location)),
+  };
+}
+
 export function buildItinerary(
   trip: TripInput,
   candidatesIn: Candidates,
 ): Itinerary {
-  let candidates = candidatesIn;
+  const candidates = kuchingRegionOnly(candidatesIn);
   const nights = tripNights(trip);
   const budgetTight =
     trip.budgetPerPerson != null && trip.budgetPerPerson < 900;
-
-  // This planner builds Kuching-region trips. Places elsewhere in Sarawak (Miri, Mulu, ...) are in the
-  // catalogue for browsing but must not appear in a Kuching itinerary.
-  const inRegion = (l: { area: string | null } | null | undefined) => !l || !l.area || l.area === "Kuching";
-  candidates = {
-    ...candidates,
-    experiences: candidates.experiences.filter((e) => inRegion(e.location)),
-    attractions: candidates.attractions.filter((a) => inRegion(a.location)),
-  };
 
   // Meals name a real place from the food guide where one fits; each place is used once before repeating.
   const eateryPool = mealPool(candidates.eateries ?? []);
@@ -363,13 +367,10 @@ export function buildItinerary(
     return mealItem(start, kind, trip, pick);
   };
 
-  // Things the traveller asked to leave out, parsed from the free-text notes.
-  const avoid = parseTripPrompt(trip.notes ?? "").avoid ?? {
-    categories: [],
-    slugs: [],
-  };
-  const avoidCat = new Set(avoid.categories);
-  const avoidSlug = new Set(avoid.slugs);
+  // Things the traveller asked to leave out, parsed from the free-text notes and the plan-page prompt.
+  const avoids = [trip.notes, trip.prompt].map((t) => parseTripPrompt(t ?? "").avoid);
+  const avoidCat = new Set(avoids.flatMap((a) => a?.categories ?? []));
+  const avoidSlug = new Set(avoids.flatMap((a) => a?.slugs ?? []));
   const wanted = (slug: string, cats: CategorySlug[]) =>
     !avoidSlug.has(slug) && !cats.some((c) => avoidCat.has(c));
 
@@ -732,15 +733,38 @@ export interface RefineResult {
   changed: boolean;
 }
 
-function targetDays(instruction: string, total: number): number[] {
-  const m = instruction.match(/day\s*(\d+)/i);
+/**
+ * What an edit request asks for. Read from the text by `intentFromText` (rules) or by the Jev
+ * model (lib/ai/jev.ts); either way `applyRefineIntent` alone changes the itinerary.
+ */
+export interface RefineIntent {
+  cheaper: boolean;
+  moreFood: boolean;
+  noOutdoor: boolean;
+  relax: boolean;
+  culture: boolean;
+  /** The one day to change (1-based), or null for the whole trip. 0 = a day that doesn't exist. */
+  targetDay: number | null;
+}
+
+/** The rule-based reading of an edit request. */
+export function intentFromText(instruction: string, total: number): RefineIntent {
+  const text = instruction.toLowerCase();
+  let targetDay: number | null = null;
+  const m = text.match(/day\s*(\d+)/i);
   if (m) {
     const n = Number(m[1]);
-    return n >= 1 && n <= total ? [n] : [];
-  }
-  if (/tomorrow/i.test(instruction) && total >= 2) return [2];
-  if (/today|first day/i.test(instruction)) return [1];
-  return Array.from({ length: total }, (_, i) => i + 1);
+    targetDay = n >= 1 && n <= total ? n : 0;
+  } else if (/tomorrow/i.test(text) && total >= 2) targetDay = 2;
+  else if (/today|first day/i.test(text)) targetDay = 1;
+  return {
+    cheaper: /cheap|budget|less expensive|save|afford/.test(text),
+    moreFood: /food|eat|culinar|hawker|restaurant|cuisine|laksa/.test(text),
+    noOutdoor: /no outdoor|indoor|not outdoor|avoid outdoor|less outdoor|rain|too hot/.test(text),
+    relax: /relax|less packed|slow|too much|fewer|lighter|tiring/.test(text),
+    culture: /culture|heritage|histor|museum|temple|longhouse/.test(text),
+    targetDay,
+  };
 }
 
 function catsOf(item: ItineraryItem, c: Candidates): CategorySlug[] {
@@ -770,14 +794,33 @@ export function applyRefinement(
   trip: TripInput,
   candidates: Candidates,
 ): RefineResult {
-  const text = instruction.toLowerCase();
+  return applyRefineIntent(
+    itinerary,
+    intentFromText(instruction, itinerary.days.length),
+    trip,
+    candidates,
+  );
+}
+
+export function applyRefineIntent(
+  itinerary: Itinerary,
+  intent: RefineIntent,
+  trip: TripInput,
+  candidates: Candidates,
+): RefineResult {
   const total = itinerary.days.length;
-  const explicitDay = /day\s*\d|tomorrow|today|first day/i.test(text);
-  const targets = new Set(targetDays(text, total));
+  const explicitDay = intent.targetDay != null;
+  const targets = new Set(
+    intent.targetDay == null
+      ? Array.from({ length: total }, (_, i) => i + 1)
+      : intent.targetDay >= 1 && intent.targetDay <= total
+        ? [intent.targetDay]
+        : [],
+  );
   const notes: string[] = [];
   const px = pax(trip);
 
-  const wantsCheaper = /cheap|budget|less expensive|save|afford/.test(text);
+  const wantsCheaper = intent.cheaper;
 
   // "make it cheaper" with no day named: trim only the single priciest day, so
   // it doesn't strip every bookable tour off the trip.
@@ -790,17 +833,10 @@ export function applyRefinement(
     targets.clear();
     if (priciest) targets.add(priciest.dayNumber);
   }
-  const wantsFood = /food|eat|culinar|hawker|restaurant|cuisine|laksa/.test(text);
-  const noOutdoor =
-    /no outdoor|indoor|not outdoor|avoid outdoor|less outdoor|rain|too hot/.test(
-      text,
-    );
-  const wantsRelax = /relax|less packed|slow|too much|fewer|lighter|tiring/.test(
-    text,
-  );
-  const wantsCulture = /culture|heritage|histor|museum|temple|longhouse/.test(
-    text,
-  );
+  const wantsFood = intent.moreFood;
+  const noOutdoor = intent.noOutdoor;
+  const wantsRelax = intent.relax;
+  const wantsCulture = intent.culture;
 
   const days = itinerary.days.map((day) => {
     if (!targets.has(day.dayNumber)) return { ...day, items: [...day.items] };

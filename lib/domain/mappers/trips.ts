@@ -53,6 +53,7 @@ export function tripToRpc(input: TripInput): Json {
     interests: input.interests,
     pace: input.pace,
     notes: input.notes,
+    prompt: input.prompt ?? null,
   };
 }
 
@@ -155,6 +156,7 @@ export function tripFromRow(row: TripRow): Trip {
     interests: row.interests.filter(isCategorySlug),
     pace: row.pace,
     notes: row.notes,
+    prompt: row.prompt,
     itinerary: current ? itineraryFromRow(current) : null,
   };
 }

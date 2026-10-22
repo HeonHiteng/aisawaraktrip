@@ -133,12 +133,12 @@ export default async function TripDetailPage({
               {trip.itinerary.version > 1 ? " · revised" : ""}
             </p>
           )}
-          {trip.notes?.trim() && (
+          {(trip.prompt?.trim() || trip.notes?.trim()) && (
             <p className="mt-3 border-t border-white/15 pt-3 text-xs text-white/75">
               <span className="font-semibold text-white/90">
                 You asked for:
               </span>{" "}
-              {trip.notes.trim()}
+              {trip.prompt?.trim() || trip.notes?.trim()}
             </p>
           )}
         </div>

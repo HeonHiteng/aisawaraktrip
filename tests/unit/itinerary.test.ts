@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { applyRefinement, buildItinerary } from "@/lib/ai/itinerary";
+import {
+  applyRefineIntent,
+  applyRefinement,
+  buildItinerary,
+  intentFromText,
+  kuchingRegionOnly,
+  type RefineIntent,
+} from "@/lib/ai/itinerary";
 import { demoAttractions, demoExperiences } from "@/lib/demo/fixtures";
 import { weekdayKey } from "@/lib/format";
 import {
@@ -216,6 +223,56 @@ describe("buildItinerary", () => {
         if (exp) expect(exp.categories).not.toContain("adventure");
       }
     }
+  });
+
+  it("the plan-page prompt vetoes too ('no museums' keeps the museum out)", () => {
+    const heritage = trip({ interests: ["heritage", "culture"], startDate: "2026-09-16", endDate: "2026-09-22" });
+    const slugsOf = (t: TripInput) =>
+      buildItinerary(t, candidates).days.flatMap((d) => d.items.map((i) => i.attractionSlug));
+    expect(slugsOf(heritage)).toContain("borneo-cultures-museum"); // control: it's a pick otherwise
+    expect(slugsOf({ ...heritage, prompt: "Heritage week for two, no museums" })).not.toContain(
+      "borneo-cultures-museum",
+    );
+  });
+
+  it("kuchingRegionOnly drops places whose location is outside the Kuching area", () => {
+    const far = { ...demoAttractions[0], slug: "mulu-caves", location: { ...demoAttractions[0].location!, area: "Miri" } };
+    const out = kuchingRegionOnly({ experiences: demoExperiences, attractions: [...demoAttractions, far] });
+    expect(out.attractions.map((a) => a.slug)).not.toContain("mulu-caves");
+    expect(out.attractions).toHaveLength(demoAttractions.length);
+    expect(out.experiences).toHaveLength(demoExperiences.length);
+  });
+});
+
+describe("intentFromText", () => {
+  it("reads the change and the day the way the rules always have", () => {
+    expect(intentFromText("no outdoor activities tomorrow", 3)).toMatchObject({ noOutdoor: true, targetDay: 2 });
+    expect(intentFromText("make day 3 cheaper", 3)).toMatchObject({ cheaper: true, targetDay: 3 });
+    expect(intentFromText("more food on the first day", 3)).toMatchObject({ moreFood: true, targetDay: 1 });
+    expect(intentFromText("make it cheaper", 3)).toMatchObject({ cheaper: true, targetDay: null });
+    expect(intentFromText("cheaper day 9", 3).targetDay).toBe(0); // a day that doesn't exist
+    expect(intentFromText("asdfghjkl", 3)).toEqual({
+      cheaper: false, moreFood: false, noOutdoor: false, relax: false, culture: false, targetDay: null,
+    });
+  });
+});
+
+describe("applyRefineIntent", () => {
+  const none: RefineIntent = { cheaper: false, moreFood: false, noOutdoor: false, relax: false, culture: false, targetDay: null };
+
+  it("acts on an intent however it was read, only on the target day", () => {
+    const base = buildItinerary(trip(), candidates);
+    const r = applyRefineIntent(base, { ...none, cheaper: true, targetDay: 2 }, trip(), candidates);
+    expect(r.changed).toBe(true);
+    expect(r.note).toContain("Day 2");
+    expect(r.itinerary.days[0]).toEqual(base.days[0]);
+    expect(r.itinerary.days[2]).toEqual(base.days[2]);
+  });
+
+  it("an empty intent changes nothing and says so", () => {
+    const r = applyRefineIntent(buildItinerary(trip(), candidates), none, trip(), candidates);
+    expect(r.changed).toBe(false);
+    expect(r.note).toMatch(/couldn't map/);
   });
 });
 

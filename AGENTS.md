@@ -24,7 +24,10 @@ the catalogue and bookings.
   Use CSS tokens, never hard-coded hex. `bg-brand-gradient` = hero CTAs only;
   `bg-brand-hero` = dark headers/hero.
 - **Supabase** — Postgres + Auth + Storage + RLS (Phase 2+)
-- **Anthropic Claude API** — `claude-sonnet-5` planner brief, `claude-haiku-4-5` edit interpreter; optional (`ANTHROPIC_API_KEY`), the app works without it
+- **Anthropic Claude API** — `claude-sonnet-5` planner brief; optional (`ANTHROPIC_API_KEY`), the app works without it
+- **TypeSafe Jev** (`@typesafe-ai/sdk`, `lib/ai/jev.ts`) — typed judgements only (choice / yes-no / score, never text): reads the
+  plan-page sentence and edit requests, and scores each candidate into a brief. Optional (`TYPESAFE_API_KEY`, off in demo mode);
+  order is Jev brief → Claude brief → rules, 8 s timeout, any failure => the next one down
 - **Mapbox GL** maps (Phase 3) · **Upstash** rate limiting · **Resend** email
 - Payments: `lib/payments/` provider interface — `mock` (in-app fake gateway, default) and `stripe` (hosted
   Checkout + signature-verified webhook at `/api/payments/webhook`, docs/deployment.md) → Billplz later.
@@ -67,7 +70,9 @@ the catalogue and bookings.
   *brief* (slugs to skip / rank first + a one-line reason each) constrained by a schema enum of real catalogue
   slugs and re-checked by `lib/ai/brief.ts` `sanitizeBrief`; the deterministic `lib/ai/itinerary.ts` does ALL
   scheduling and pricing from the DB. No key, an error or a timeout => the deterministic planner alone.
-  Traveller text goes to the model as quoted data. Check a key with `npm run test:live` (`tests/live/ai.live.test.ts`).
+  Traveller text goes to the model as quoted data. Check a key with `npm run test:live` (`tests/live/ai.live.test.ts`,
+  `tests/live/jev.live.test.ts`). The plan-page sentence is stored verbatim in `trips.prompt` (≤ 300 chars) and vetoes
+  like the notes do.
 - **Food guide + must-see**: `eateries` table (dish, $-$$ tier, Maps link; public reads published, admin writes) and
   `attractions.featured_rank` (1-5 = "must-see", 6+ = "also great"). The guide's data lives in `data/eateries.json`
   (demo fixtures + `npm run seed:guide` -> `supabase/seed-guide.sql`). Meals in a plan name a real Kuching place

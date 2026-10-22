@@ -5,8 +5,10 @@
 - **URL:** https://sarawak-trip-planner.vercel.app — Vercel project `sarawak-trip-planner`
   (team `heonhitengs-projects`), connected to the GitHub repo: **every push to `main`
   deploys to production automatically.**
-- **Backend:** Supabase project "Ai Sarawak" (`tuwbkgworagassllvsqy`, ap-northeast-1) — real
+- **Backend:** Supabase project "ai-sarawak" (`zjlyyeiwrrewrahaqyzq`, ap-southeast-1) — real
   database, guest login, RLS. Demo mode is OFF (`NEXT_PUBLIC_DEMO_MODE=false`).
+  Since 2026-10-21 the schema is owned by a separate backend repo (migrations, SQL functions,
+  RLS, seed); this repo's `supabase/` folder is a mirror of it, kept for `tests/db`.
 - **Payments are the FAKE gateway** (`PAYMENT_PROVIDER=mock`, `ALLOW_MOCK_PAYMENTS=true`).
   The traveller picks "approve", so this is staging only: no real money, no real customers.
   Without `ALLOW_MOCK_PAYMENTS=true` the app refuses to take payments in production with a
@@ -57,6 +59,7 @@ Node is pinned to 22.x via `package.json` `engines`.
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Phase 2 | Supabase → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Phase 2 | **server-only**; used by webhooks / admin / seeding |
 | `ANTHROPIC_API_KEY` | Phase 4 | enables the Claude planner (falls back to the deterministic builder without it or on any error) — see *Turning on the Claude planner* below |
+| `TYPESAFE_API_KEY` | optional | enables the Jev planner (tried before Claude; falls back without it or on any error) — see *Turning on the Jev planner* below. `node scripts/vercel-env.mjs` pushes it when set and skips it otherwise |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Phase 3 | map pins on detail pages |
 | `PAYMENT_PROVIDER` | Phase 7 | `mock` (default) → `stripe` → `billplz` |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Phase 7 | test mode first |
@@ -113,16 +116,46 @@ comes from your catalogue (Claude only chooses what to skip/rank first and write
 
 1. Create a key at console.anthropic.com → API keys (needs a payment method). **Set a monthly spend
    limit** there first. Rough cost: one plan is ~3k tokens in / ~0.5k out on Sonnet — a couple of US cents;
-   an edit that the rules can't handle costs a fraction of a cent (Haiku). Each user is already limited
+   edits are read by the rules (or Jev, below) and cost nothing here. Each user is already limited
    to 8 plans and 20 edits a minute (`lib/rate-limit.ts`).
 2. Local check: put `ANTHROPIC_API_KEY=…` in `.env.local` and run `npm run test:live` — the
    "Claude planner (live API)" tests print the brief and fail loudly if the API shape or model id is wrong.
 3. Production: add `ANTHROPIC_API_KEY` in Vercel → Settings → Environment Variables (Production) and redeploy.
-   Optional: `AI_PLANNER_MODEL` / `AI_REFINE_MODEL` to switch models without a code change.
+   Optional: `AI_PLANNER_MODEL` to switch models without a code change.
 4. Watch Vercel logs for `[ai] … failed; using the rule-based planner` — that line means users are getting
    the fallback (bad key, quota, outage, timeout), which is safe but not personalised.
 5. Privacy: trip inputs (dates, budget, interests, notes) go to Anthropic. The privacy policy already says
    so; declare it in Play's Data safety form (docs/play-store.md).
+
+## Turning on the Jev planner
+
+Jev (TypeSafe System One, `lib/ai/jev.ts`) answers typed questions — a choice, a yes/no probability, a
+score — and never writes text. The planner uses it in three places, all dormant until a key is set:
+
+- **The plan-page sentence** ("relaxed family week, no hiking, love wildlife") → form fields. The rules fill
+  the form instantly; Jev's reading lands about a second later (`interpretPrompt` in `app/(app)/plan/actions.ts`,
+  20 a minute per user).
+- **Edit requests** ("the second day is too pricey for us") → what to change and on which day; the rule-based
+  editor still makes the change.
+- **Candidate scoring**: one request per Kuching-region place, in parallel, asking how well it fits this
+  traveller and whether they ruled it out. Clear conflicts are vetoed and good fits ranked first — the same
+  brief Claude returns, so the deterministic builder still does all scheduling and pricing.
+
+Order: **Jev brief → Claude brief → rules**. No key, demo mode, 8 s timeout or any error → the next one down,
+exactly as before. Jev's slugs are never trusted (`sanitizeBrief`), so it can't add a place, price or time.
+
+1. Get a key at typesafe.ai. Cost: input ~$0.042 per million tokens, output free. One plan scores ~15–20
+   candidates at ~600–1,100 tokens each (≈ 0.1 US cents); a sentence ~2–3k tokens, an edit ~1k. `npm run test:live`
+   prints the real numbers.
+2. Local check: put `TYPESAFE_API_KEY=…` in `.env.local` and run `npm run test:live` — the "Jev planner (live API)"
+   tests print the brief, the latency and the token count.
+3. Production: add `TYPESAFE_API_KEY` (sensitive) in Vercel → Settings → Environment Variables, or run
+   `node scripts/vercel-env.mjs`, and redeploy. Optional: `AI_JEV_MODEL` (default `jev-latest`).
+4. Watch Vercel logs for `[jev] … failed; using the rules` / `using the next planner` — users are getting the
+   fallback (bad key, quota, outage, timeout): safe, not personalised.
+5. Privacy: trip inputs (dates, group, budget, interests, the sentence and notes) and edit requests go to
+   TypeSafe. Declare it with the other AI provider in Play's Data safety form (docs/play-store.md) and the
+   privacy policy.
 
 ## Turning on real payments (Stripe)
 

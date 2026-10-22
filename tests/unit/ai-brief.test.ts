@@ -178,7 +178,7 @@ describe("applyBrief + buildItinerary: the brief steers, the database decides", 
 
 // ---- the Claude calls, with a fake client (no network) ----
 
-import { interpretRefinement, PLANNER_MODEL, REFINE_MODEL, requestBrief, type ParseClient } from "@/lib/ai/claude";
+import { PLANNER_MODEL, requestBrief, type ParseClient } from "@/lib/ai/claude";
 
 const fake = (impl: (p: Record<string, unknown>) => Promise<{ parsed_output?: unknown }>): ParseClient & { calls: Record<string, unknown>[] } => {
   const calls: Record<string, unknown>[] = [];
@@ -221,21 +221,5 @@ describe("requestBrief", () => {
     expect(await requestBrief(trip(), catalogue, { client: fake(async () => { throw new Error("529 overloaded"); }) })).toBeNull();
     expect(await requestBrief(trip(), catalogue, { client: fake(async () => ({ parsed_output: null })) })).toBeNull();
     expect(await requestBrief(trip(), { experiences: [], attractions: [] }, { client: fake(async () => ({})) })).toBeNull();
-  });
-});
-
-describe("interpretRefinement", () => {
-  beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
-  afterEach(() => vi.restoreAllMocks());
-
-  it("uses the small model and returns a cleaned command", async () => {
-    const c = fake(async () => ({ parsed_output: { understood: true, command: "make day 2 cheaper!!" } }));
-    expect(await interpretRefinement("day two is too pricey", 3, { client: c })).toBe("make day 2 cheaper");
-    expect(c.calls[0].model).toBe(REFINE_MODEL);
-  });
-  it("is null when not understood, malformed, or failing", async () => {
-    expect(await interpretRefinement("x", 3, { client: fake(async () => ({ parsed_output: { understood: false, command: "" } })) })).toBeNull();
-    expect(await interpretRefinement("x", 3, { client: fake(async () => ({ parsed_output: { nope: 1 } })) })).toBeNull();
-    expect(await interpretRefinement("x", 3, { client: fake(async () => { throw new Error("timeout"); }) })).toBeNull();
   });
 });

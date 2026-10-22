@@ -28,6 +28,7 @@ export const tripInputSchema = z
     interests: z.array(CATEGORY).max(7).default([]),
     pace: z.enum(["relaxed", "moderate", "packed"]).default("moderate"),
     notes: z.string().trim().max(500).nullable().catch(null),
+    prompt: z.string().trim().max(300).nullable().catch(null),
   })
   .refine((v) => new Date(v.endDate) >= new Date(v.startDate), {
     message: "End date must be on or after the start date.",
@@ -44,6 +45,9 @@ export const tripInputSchema = z
   );
 
 export type TripInputParsed = z.infer<typeof tripInputSchema>;
+
+/** The plan page's one-line trip description, for the interpret action. */
+export const promptSchema = z.string().trim().min(4).max(300);
 
 export const refineSchema = z.object({
   instruction: z.string().trim().min(2, "Say what to change.").max(200),

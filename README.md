@@ -14,7 +14,7 @@ Admins manage the catalogue and bookings.
 | Framework | Next.js 16 (App Router, RSC, Server Actions), React 19, TypeScript |
 | UI | Tailwind CSS v4, shadcn/ui |
 | Data / auth | Supabase (Postgres, Auth, Storage, RLS) |
-| AI | Anthropic Claude (`claude-sonnet-5` / `claude-haiku-4-5`) |
+| AI | TypeSafe Jev (typed judgements: prompt, edits, candidate scoring) · Anthropic Claude (`claude-sonnet-5` brief) — both optional |
 | Maps | Mapbox GL |
 | Email | Resend · Rate limiting: Upstash |
 | Payments | Provider interface — `mock` → Stripe (test) → Billplz |
@@ -100,6 +100,6 @@ See `AGENTS.md` for conventions, `TODO.md` for the phase checklist,
 ## Deploy
 
 Import the repo at [vercel.com](https://vercel.com) and hit Deploy — it runs in
-demo mode with **zero environment variables**. Add Supabase / Anthropic / Stripe
+demo mode with **zero environment variables**. Add Supabase / Anthropic / TypeSafe / Stripe
 keys later (see `docs/deployment.md`) and set `NEXT_PUBLIC_DEMO_MODE=false` to go
 live.

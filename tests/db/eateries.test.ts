@@ -89,6 +89,21 @@ describe("eateries RLS", () => {
     await as(db, ADMIN(), `delete from public.eateries where slug = 'x-cafe'`);
   });
 
+  it("client roles hold no table privileges beyond what RLS governs (TRUNCATE etc. bypass RLS)", async () => {
+    const privs = async (role: string) =>
+      (
+        await db.query<{ p: string }>(
+          `select p from unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p
+           where has_table_privilege($1, 'public.eateries', p) order by p`,
+          [role],
+        )
+      ).rows.map((r) => r.p);
+    expect(await privs("anon")).toEqual(["SELECT"]);
+    expect(await privs("authenticated")).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
+    await expect(as(db, { role: "anon" }, `truncate public.eateries`)).rejects.toThrow(/permission denied/i);
+    await expect(as(db, TOURIST(), `truncate public.eateries`)).rejects.toThrow(/permission denied/i);
+  });
+
   it("the table refuses bad data: unknown city, tier outside 1-3, non-https link, over-long note", async () => {
     const ins = (cols: string, vals: string) =>
       as(db, ADMIN(), `insert into public.eateries (slug, name, ${cols}) values ('bad', 'Bad Place', ${vals})`);

@@ -136,11 +136,18 @@ export function TripForm({
   }
 
   function applyParsed(p: ParsedTrip) {
-    if (p.days) setEndDate(addDays(startDate, p.days - 1));
+    if (p.startDate) {
+      setStartDate(p.startDate);
+      // a named start date keeps the trip's length unless the reading also gives one
+      if (!p.days) setEndDate(addDays(p.startDate, nightsBetween(startDate, endDate)));
+    }
+    if (p.days) setEndDate(addDays(p.startDate ?? startDate, p.days - 1));
     if (p.budgetPerPerson) setBudget(String(p.budgetPerPerson));
     if (p.groupType) setGroupType(p.groupType);
     if (p.numAdults) setAdults(p.numAdults);
     if (p.numChildren != null) setChildren(p.numChildren);
+    // a couple or a solo traveller who mentions no children has none — even if an earlier sentence did
+    else if (p.groupType === "couple" || p.groupType === "solo") setChildren(0);
     if (p.interests?.length) setInterests(new Set(p.interests));
     if (p.pace) setPace(p.pace);
     setJustApplied(true);
@@ -153,7 +160,7 @@ export function TripForm({
   }
 
   function applyPrompt(text: string) {
-    // the rules' reading lands instantly; the server's (Jev, when on) refines it a moment later
+    // the rules' reading lands instantly; the server's (Claude / Jev, when on) refines it a moment later
     applyParsed(parseTripPrompt(text));
     setApplied(true);
     interpretOnServer(text);
@@ -161,13 +168,15 @@ export function TripForm({
 
   function interpretOnServer(text: string) {
     const t = text.trim();
-    if (t.length < 12 || t === lastInterpreted.current) return;
+    // Chinese packs a trip into a few characters ("三天两夜情侣游"), so it needs fewer of them
+    const minLength = /[㐀-鿿]/.test(t) ? 4 : 12;
+    if (t.length < minLength || t === lastInterpreted.current) return;
     lastInterpreted.current = t;
     const id = ++interpretSeq.current;
     setInterpreting(true);
     interpretPrompt(t)
       .then((r) => {
-        if (id === interpretSeq.current && r.source === "jev") applyParsed(r.parsed);
+        if (id === interpretSeq.current && r.source !== "rules") applyParsed(r.parsed);
       })
       .catch(() => {}) // the rules' reading stands
       .finally(() => {

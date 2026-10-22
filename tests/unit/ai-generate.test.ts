@@ -14,6 +14,8 @@ const claude = vi.hoisted(() => ({
   enabled: false,
   brief: null as unknown,
   briefCalls: 0,
+  parsed: null as unknown,
+  promptCalls: 0,
 }));
 
 const jev = vi.hoisted(() => ({
@@ -32,6 +34,10 @@ vi.mock("@/lib/ai/claude", () => ({
   requestBrief: async () => {
     claude.briefCalls++;
     return claude.brief;
+  },
+  readTripPrompt: async () => {
+    claude.promptCalls++;
+    return claude.parsed;
   },
 }));
 
@@ -71,7 +77,7 @@ const trip: TripInput = {
 const itemsOf = (i: Awaited<ReturnType<typeof generateItinerary>>) => i.days.flatMap((d) => d.items);
 
 beforeEach(() => {
-  Object.assign(claude, { enabled: false, brief: null, briefCalls: 0 });
+  Object.assign(claude, { enabled: false, brief: null, briefCalls: 0, parsed: null, promptCalls: 0 });
   Object.assign(jev, { enabled: false, brief: null, parsed: null, intent: null, briefCalls: 0, promptCalls: 0, intentCalls: 0 });
 });
 
@@ -113,6 +119,27 @@ describe("generateItinerary", () => {
     jev.parsed = { avoid: { categories: ["shopping"], slugs: [] } } satisfies ParsedTrip;
     const it = await generateItinerary({ ...shoppers, prompt: "old town walks, we'd rather not browse stores" });
     expect(jev.promptCalls).toBe(1);
+    expect(itemsOf(it).some((i) => isShopping(i.attractionSlug))).toBe(false);
+  });
+
+  it("what Claude read in the traveller's prompt is vetoed too, alongside Jev's reading", async () => {
+    const shoppers = { ...trip, interests: ["shopping", "heritage"] as TripInput["interests"] };
+    const isShopping = (slug: string | null) =>
+      demoAttractions.find((a) => a.slug === slug)?.categories.includes("shopping") ?? false;
+
+    jev.enabled = true;
+    jev.brief = { avoidSlugs: [], avoidCategories: [], preferSlugs: [], reasons: {} } satisfies Brief;
+    jev.parsed = null; // Jev missed it (it reads English best)
+    const before = await generateItinerary({ ...shoppers, prompt: "老街走走就好，商场就算了" });
+    expect(claude.promptCalls).toBe(0); // Claude is off
+    expect(itemsOf(before).some((i) => isShopping(i.attractionSlug))).toBe(true); // control
+
+    claude.enabled = true;
+    claude.parsed = { avoid: { categories: ["shopping"], slugs: [] } } satisfies ParsedTrip;
+    const it = await generateItinerary({ ...shoppers, prompt: "老街走走就好，商场就算了" });
+    expect(claude.promptCalls).toBe(1);
+    expect(claude.briefCalls).toBe(0); // Jev's brief answered; Claude only read the prompt
+    expect(it.model).toBe("jev-latest");
     expect(itemsOf(it).some((i) => isShopping(i.attractionSlug))).toBe(false);
   });
 

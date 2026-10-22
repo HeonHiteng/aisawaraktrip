@@ -8,7 +8,8 @@ import { spawnSync } from "node:child_process";
 process.loadEnvFile(".env.local");
 const env = process.env;
 
-// name -> [value, sensitive?]. Public values are inlined into the browser bundle anyway.
+// name -> [value, sensitive?, optional?]. Public values are inlined into the browser bundle anyway.
+// An optional variable that isn't set is skipped instead of failing the run.
 const vars = {
   NEXT_PUBLIC_DEMO_MODE: ["false", false],
   NEXT_PUBLIC_SUPABASE_URL: [env.NEXT_PUBLIC_SUPABASE_URL, false],
@@ -18,10 +19,16 @@ const vars = {
   // "approve", so lib/payments refuses to run it in production unless this is set explicitly.
   PAYMENT_PROVIDER: ["mock", false],
   ALLOW_MOCK_PAYMENTS: ["true", false],
+  // Jev planner (lib/ai/jev.ts); without it the planner uses Claude / the rules.
+  TYPESAFE_API_KEY: [env.TYPESAFE_API_KEY, true, true],
 };
 
 let failed = 0;
-for (const [name, [value, sensitive]] of Object.entries(vars)) {
+for (const [name, [value, sensitive, optional]] of Object.entries(vars)) {
+  if (!value && optional) {
+    console.log(`- ${name}: not set, skipped (optional)`);
+    continue;
+  }
   if (!value) {
     console.error(`✗ ${name}: not set in .env.local`);
     failed++;

@@ -64,7 +64,8 @@ describe("interpretTripPrompt (A)", () => {
     }));
     const p = await interpretTripPrompt(text, { client: c });
     expect(p?.days).toBe(5); // the rules' number
-    expect(p?.groupType).toBe("family"); // the rules said "couple" (wife)
+    expect(p?.groupType).toBe("family");
+    expect(p?.numAdults).toBe(4); // the rules' head-count: me, my wife, her parents
     expect(p?.interests).toEqual(["wildlife"]);
     expect(p?.avoid?.categories).toEqual(["adventure"]);
   });

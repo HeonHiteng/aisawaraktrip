@@ -143,7 +143,7 @@ const WHY_BY_SLUG: Record<string, string> = {
   "borneo-cultures-museum":
     "The best single primer on Sarawak's peoples and rainforest before you head out of town.",
   "fort-margherita":
-    "A short sampan crossing to the Brooke-era fort — history plus rooftop views of the old town.",
+    "Over the Darul Hana Bridge to the Brooke-era fort — history plus rooftop views of the old town.",
   "tua-pek-kong-temple":
     "Kuching's oldest Chinese temple — a five-minute stop that anchors the old town.",
   "semenggoh-nature-reserve":

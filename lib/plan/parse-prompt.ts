@@ -74,6 +74,24 @@ function parseAvoid(text: string): { categories: CategorySlug[]; slugs: string[]
   return { categories: [...categories], slugs: [...slugs] };
 }
 
+const SPOUSE = /\bmy (?:wife|husband|partner|girlfriend|boyfriend)\b/;
+/** Two people at once: "my parents", "my wife's parents", "mum and dad", "in-laws". */
+const ELDER_PAIRS =
+  /\b(?:my (?:(?:wife|husband|partner|girlfriend|boyfriend)'?s )?(?:parents|folks|grandparents)|(?:mum|mom|mother) and (?:dad|father)|in-?laws)\b/g;
+const ELDER_ONE = /\bmy (?:mum|mom|mother|dad|father|grandma|grandmother|grandpa|grandfather)\b/g;
+
+/**
+ * Adults named beside the writer ("with my parents" = 3: me + two). The writer counts as one.
+ * `elders` = an older generation is coming, which makes it a family trip even with a spouse along.
+ */
+function partyOf(t: string): { adults: number; elders: boolean } | null {
+  const pairs = t.match(ELDER_PAIRS)?.length ?? 0;
+  const ones = t.replace(ELDER_PAIRS, " ").match(ELDER_ONE)?.length ?? 0;
+  const spouse = SPOUSE.test(t) ? 1 : 0;
+  if (!pairs && !ones && !spouse) return null;
+  return { adults: Math.min(20, 1 + spouse + 2 * pairs + ones), elders: pairs + ones > 0 };
+}
+
 export function parseTripPrompt(text: string): ParsedTrip {
   const t = text.toLowerCase();
   const out: ParsedTrip = {};
@@ -98,7 +116,12 @@ export function parseTripPrompt(text: string): ParsedTrip {
   const kids = t.match(/(\d+)\s*(?:kids?|child(?:ren)?)/);
   if (kids) out.numChildren = Math.min(20, parseInt(kids[1], 10));
 
-  if (/\b(couple|honeymoon|partner|girlfriend|boyfriend|wife|husband|two of us)\b/.test(t)) {
+  const party = partyOf(t);
+  if (party && !adults) out.numAdults = party.adults;
+
+  if (party?.elders) {
+    out.groupType = "family";
+  } else if (/\b(couple|honeymoon|partner|girlfriend|boyfriend|wife|husband|two of us)\b/.test(t)) {
     out.groupType = "couple";
     out.numAdults ??= 2;
   } else if (/\b(family|kids?|children|parents|grandparents)\b/.test(t)) {

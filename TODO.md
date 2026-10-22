@@ -381,6 +381,9 @@ Legend: ✅ done · 🔨 in progress · ⏭️ next · 🚫 blocked
   `supabase db push` stays consistent), seed loaded (7 categories · 5 locations ·
   8 attractions · 5 vendors · 6 experiences · joins · images · rating baseline · avatars).
   17 tables, RLS on every one.
+- ➡️ **Moved 2026-10-21** to Supabase project "ai-sarawak" (`zjlyyeiwrrewrahaqyzq`,
+  ap-southeast-1); the project above is no longer used. Schema changes now happen in the
+  separate backend repo and are mirrored into `supabase/`.
 - ✅ **Migrations tested before touching the project.** `tests/db/` runs every migration +
   seed on an in-process Postgres (PGlite; Supabase roles / `auth.uid()` / default grants
   stubbed) — 21 tests: schema, catalogue visibility, role protection, cross-user

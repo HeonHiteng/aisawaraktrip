@@ -5,8 +5,10 @@
 - **URL:** https://sarawak-trip-planner.vercel.app — Vercel project `sarawak-trip-planner`
   (team `heonhitengs-projects`), connected to the GitHub repo: **every push to `main`
   deploys to production automatically.**
-- **Backend:** Supabase project "Ai Sarawak" (`tuwbkgworagassllvsqy`, ap-northeast-1) — real
+- **Backend:** Supabase project "ai-sarawak" (`zjlyyeiwrrewrahaqyzq`, ap-southeast-1) — real
   database, guest login, RLS. Demo mode is OFF (`NEXT_PUBLIC_DEMO_MODE=false`).
+  Since 2026-10-21 the schema is owned by a separate backend repo (migrations, SQL functions,
+  RLS, seed); this repo's `supabase/` folder is a mirror of it, kept for `tests/db`.
 - **Payments are the FAKE gateway** (`PAYMENT_PROVIDER=mock`, `ALLOW_MOCK_PAYMENTS=true`).
   The traveller picks "approve", so this is staging only: no real money, no real customers.
   Without `ALLOW_MOCK_PAYMENTS=true` the app refuses to take payments in production with a

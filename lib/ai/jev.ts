@@ -178,7 +178,7 @@ export function mergeTripAnswers(text: string, answers: Answers): ParsedTrip {
   const pace = sure(readChoice(answers, "pace", PACES));
   if (pace) out.pace = pace as TripPace;
   const band = sure(readChoice(answers, "budget_band", BUDGET_BANDS));
-  if (band && out.budgetPerPerson == null) out.budgetPerPerson = BUDGET_BAND_MYR[band as keyof typeof BUDGET_BAND_MYR];
+  if (band && out.budgetPerPerson == null && out.budgetTotal == null) out.budgetPerPerson = BUDGET_BAND_MYR[band as keyof typeof BUDGET_BAND_MYR];
 
   const interests = CATEGORIES.filter((c) => (readNoul(answers, `interest_${c}`) ?? 0) >= INTEREST_MIN);
   if (interests.length) out.interests = interests;

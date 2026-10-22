@@ -117,7 +117,11 @@ describe("interpretTripPrompt (A)", () => {
   it("a spending level in words only fills the budget when there's no amount", async () => {
     const c = fake(async () => ({ answers: tripAnswers({ budget_band: sure("budget") }) }));
     expect((await interpretTripPrompt("cheap backpacker trip", { client: c }))?.budgetPerPerson).toBe(800);
-    expect((await interpretTripPrompt("cheap trip, budget RM2000", { client: c }))?.budgetPerPerson).toBe(2000);
+    expect((await interpretTripPrompt("cheap trip, budget RM800 each", { client: c }))?.budgetPerPerson).toBe(800);
+    // an amount with no head-count is the group's total, left for the form to split — not a band
+    const total = await interpretTripPrompt("cheap trip, budget RM2000", { client: c });
+    expect(total?.budgetTotal).toBe(2000);
+    expect(total?.budgetPerPerson).toBeUndefined();
   });
 
   it("a vetoed category is not also an interest", async () => {

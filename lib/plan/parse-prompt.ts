@@ -5,7 +5,13 @@ export interface ParsedTrip {
   days?: number;
   /** First day (yyyy-mm-dd), when the traveller named one. Only Claude reads dates (lib/ai/claude.ts). */
   startDate?: string;
+  /**
+   * Budget per traveller. An amount is the whole group's unless the traveller says it's per person
+   * ("RM800 each", "每人800"), so a total is divided by the head-count named in the same text.
+   */
   budgetPerPerson?: number;
+  /** A group total whose head-count the text doesn't give: the form divides it by its travellers. */
+  budgetTotal?: number;
   groupType?: GroupType;
   numAdults?: number;
   numChildren?: number;
@@ -84,19 +90,45 @@ const CN_MONEY = String.raw`(\d+(?:\.\d+)?\s*(?:k|千|万)?|[零〇一二两俩�
 const CN_DAYS = new RegExp(String.raw`(?<!第)${CN_NUM}\s*(?:天|日(?=游))`);
 const CN_NIGHTS = new RegExp(String.raw`(?<!第)${CN_NUM}\s*(?:夜|晚)`);
 const CN_ADULTS = new RegExp(String.raw`${CN_NUM}\s*(?:个|位|名)?\s*(?:大人|成人|成年人)`);
-const CN_KIDS = new RegExp(String.raw`${CN_NUM}\s*(?:个|位|名)?\s*(?:小孩|孩子|儿童|小朋友|小童|宝宝)`);
-/** "预算每人一千" / "人均RM800" / "总预算四千马币": group 1 marks a total, group 2 is the amount. */
+/** "1个小孩", and "1个9岁小孩" / "两个5岁的孩子" with an age in between. */
+const CN_KIDS = new RegExp(
+  String.raw`${CN_NUM}\s*(?:个|位|名)?\s*(?:\d+\s*岁的?\s*|[一二两三四五六七八九十]+\s*岁的?\s*)?(?:小孩|孩子|儿童|小朋友|小童|宝宝)`,
+);
+/** A head-count with no adult/child split: "4 friends", "我们4个friends", "5个人", "6 pax". */
+const PEOPLE = new RegExp(
+  String.raw`${CN_NUM}\s*(?:个|位|名)?\s*(?:people|persons|pax|friends|travell?ers|of us|人(?!均)|朋友)`,
+);
+/** "预算每人一千" / "人均RM800" / "总预算四千马币": group 1 is the amount. */
 const CN_BUDGET = new RegExp(
-  String.raw`(总|一共|全部)?(?:预算|人均|每人|每个人|每位)[^\d零〇一二两俩三四五六七八九十]{0,6}?(?:rm|myr)?\s*${CN_MONEY}`,
+  String.raw`(?:预算|人均|每人|每个人|每位)[^\d零〇一二两俩三四五六七八九十]{0,6}?(?:rm|myr)?\s*${CN_MONEY}`,
 );
 /** "四千马币" with no budget word: group 1 is the amount. */
 const CN_RINGGIT = new RegExp(String.raw`${CN_MONEY}\s*(?:马币|令吉)`);
+/** Said to be per traveller. Anything else is the whole group's budget. */
+const PER_PERSON =
+  /\b(?:per (?:person|pax|head|adult|traveller|traveler)|each|pp|a head|apiece)\b|\/\s*(?:person|pax|pp|head)|人均|每人|每个人|每位|每一位/;
 
 function cnCount(re: RegExp, t: string): number | null {
   const m = t.match(re);
   if (!m) return null;
   const n = cnNumber(m[1]);
   return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+/**
+ * A budget amount as the form wants it. Per person stays as it is; a group total is divided by the
+ * head-count when the text gives one, and otherwise handed back as `budgetTotal` for the form to
+ * divide by its own travellers. Shared with lib/ai/claude.ts.
+ */
+export function splitBudget(
+  amount: number,
+  perPerson: boolean,
+  adults: number | undefined,
+  children: number | undefined,
+): Pick<ParsedTrip, "budgetPerPerson" | "budgetTotal"> {
+  if (perPerson) return { budgetPerPerson: amount };
+  if (adults) return { budgetPerPerson: Math.max(1, Math.round(amount / (adults + (children ?? 0)))) };
+  return { budgetTotal: amount };
 }
 
 function toNumber(raw: string): number {
@@ -201,24 +233,19 @@ export function parseTripPrompt(text: string): ParsedTrip {
   }
   if (out.days) out.days = Math.min(14, Math.max(1, out.days));
 
-  // A Chinese budget phrase also says per person or for everyone; a total is split after head-count.
-  let budgetIsTotal = false;
-  const cnBudget = t.match(CN_BUDGET);
-  const cnRinggit = cnBudget ? null : t.match(CN_RINGGIT);
-  const cnAmount = cnBudget ? cnBudget[2] : cnRinggit?.[1];
+  // The amount now; whether it's per person or the group's is settled once the head-count is known.
+  let amount: number | undefined;
+  const cnAmount = t.match(CN_BUDGET)?.[1] ?? t.match(CN_RINGGIT)?.[1];
   if (cnAmount) {
     const n = Math.round(cnNumber(cnAmount));
-    if (n > 0 && n < 1_000_000) {
-      out.budgetPerPerson = n;
-      budgetIsTotal = Boolean(cnBudget?.[1]);
-    }
+    if (n > 0 && n < 1_000_000) amount = n;
   }
-  const budget = out.budgetPerPerson
+  const budget = amount
     ? null
     : t.match(/(?:rm|myr|budget(?: of)?|around|about)\s*([\d,]+(?:\.\d+)?k?)/);
   if (budget) {
     const n = toNumber(budget[1]);
-    if (n > 0 && n < 1_000_000) out.budgetPerPerson = n;
+    if (n > 0 && n < 1_000_000) amount = n;
   }
 
   const adults = t.match(/(\d+)\s*adults?/);
@@ -232,6 +259,10 @@ export function parseTripPrompt(text: string): ParsedTrip {
 
   const party = partyOf(t);
   if (party && !adults) out.numAdults = party.adults;
+  if (out.numAdults == null) {
+    const people = cnCount(PEOPLE, t);
+    if (people) out.numAdults = Math.min(20, Math.max(1, people - (out.numChildren ?? 0)));
+  }
 
   if (party?.elders) {
     out.groupType = "family";
@@ -261,10 +292,8 @@ export function parseTripPrompt(text: string): ParsedTrip {
     out.groupType = "business";
   }
 
-  // "总预算四千" for 2 adults + 2 kids is RM1000 each
-  if (budgetIsTotal && out.budgetPerPerson && out.numAdults) {
-    out.budgetPerPerson = Math.round(out.budgetPerPerson / (out.numAdults + (out.numChildren ?? 0)));
-  }
+  // "RM4,000 for 2 adults + 2 kids" is RM1,000 each; "RM800 each" / "每人800" is already per person
+  if (amount) Object.assign(out, splitBudget(amount, PER_PERSON.test(t), out.numAdults, out.numChildren));
 
   const interests: CategorySlug[] = [];
   for (const [slug, re] of Object.entries(INTEREST_WORDS) as [

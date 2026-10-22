@@ -11,7 +11,7 @@ import {
   type Brief,
 } from "@/lib/ai/brief";
 import type { Candidates } from "@/lib/ai/itinerary";
-import { AVOID_SLUGS, parseTripPrompt, type ParsedTrip } from "@/lib/plan/parse-prompt";
+import { AVOID_SLUGS, parseTripPrompt, splitBudget, type ParsedTrip } from "@/lib/plan/parse-prompt";
 import type { CategorySlug } from "@/types/catalogue";
 import type { TripInput } from "@/types/trip";
 
@@ -144,7 +144,8 @@ export const tripPromptSchema = z.object({
   children: z.number().int().nullable().describe("Number of children travelling."),
   group: z.enum(GROUPS).nullable(),
   pace: z.enum(PACES).nullable(),
-  budget_per_person_myr: z.number().nullable().describe("Budget per traveller in Malaysian ringgit."),
+  budget_myr: z.number().nullable().describe("The budget amount in Malaysian ringgit, as stated."),
+  budget_is_per_person: z.boolean().describe("True only if they said the amount is per person."),
   interests: z.array(z.enum(CATEGORIES)),
   avoid_categories: z.array(z.enum(CATEGORIES)),
   avoid_things: z.array(z.enum(AVOID_THINGS)),
@@ -159,7 +160,8 @@ Fill a field only when the traveller said it or clearly implied it. Otherwise us
 - adults / children: head-counts. "2 couples" is 4 adults. "A family of four with two kids" is 2 adults and 2 children. "Me and my parents" is 3 adults.
 - group: solo, couple, family (relatives, children or older parents along), friends, or business.
 - pace: relaxed, moderate or packed — only if they said how busy they want the days to be.
-- budget_per_person_myr: spending per traveller in Malaysian ringgit (RM, MYR, 马币, 令吉). If they gave a total for the whole group, divide it by the number of travellers; if the head-count is unknown, use null. If the amount is in another currency, use null — do not convert.
+- budget_myr: the amount they want to spend, in Malaysian ringgit (RM, MYR, 马币, 令吉), exactly as stated — do not divide or multiply it. If the amount is in another currency, use null — do not convert.
+- budget_is_per_person: true only if they said the amount is per person ("per person", "each", "pp", "每人", "人均", "每位"). Otherwise false: an amount on its own is the budget for the whole group.
 - interests: categories they want. avoid_categories: categories they said they don't want or can't do ("no hiking", "不要爬山" and "can't walk far" are adventure). Never put a category in both.
 - avoid_things: specific kinds of activity they ruled out — boats (boats, river cruises, kayaking, being on the water), museums, temples, cooking (a cooking class).
 
@@ -224,10 +226,15 @@ export function toParsedTrip(text: string, answer: TripPromptAnswer, today: stri
   set("numChildren", clampInt(answer.children, 0, 20));
   set("groupType", answer.group && GROUPS.includes(answer.group) ? answer.group : undefined);
   set("pace", answer.pace && PACES.includes(answer.pace) ? answer.pace : undefined);
-  const budget = answer.budget_per_person_myr;
-  set("budgetPerPerson", budget != null && budget > 0 && budget < 1_000_000 ? Math.round(budget) : undefined);
   if (answer.adults == null && answer.group === "couple") out.numAdults ??= 2;
   if (answer.adults == null && answer.group === "solo") out.numAdults ??= 1;
+  // The amount as stated; code, not the model, divides a group total by the head-count.
+  const budget = answer.budget_myr;
+  if (budget != null && budget > 0 && budget < 1_000_000) {
+    delete out.budgetPerPerson;
+    delete out.budgetTotal;
+    Object.assign(out, splitBudget(Math.round(budget), answer.budget_is_per_person, out.numAdults, out.numChildren));
+  }
 
   const isCategory = (c: string): c is CategorySlug => (CATEGORIES as readonly string[]).includes(c);
   const avoidCategories = new Set<CategorySlug>([

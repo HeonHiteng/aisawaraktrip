@@ -21,6 +21,9 @@ const vars = {
   ALLOW_MOCK_PAYMENTS: ["true", false],
   // Jev planner (lib/ai/jev.ts); without it the planner uses Claude / the rules.
   TYPESAFE_API_KEY: [env.TYPESAFE_API_KEY, true, true],
+  // Claude (lib/ai/claude.ts): reads the plan-page sentence, and plans when Jev isn't on.
+  ANTHROPIC_API_KEY: [env.ANTHROPIC_API_KEY, true, true],
+  AI_PROMPT_MODEL: [env.AI_PROMPT_MODEL, false, true],
 };
 
 let failed = 0;

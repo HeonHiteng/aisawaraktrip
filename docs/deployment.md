@@ -58,7 +58,7 @@ Node is pinned to 22.x via `package.json` `engines`.
 | `NEXT_PUBLIC_DEMO_MODE` | to go live | set `false` once Supabase is configured (otherwise demo mode stays on) |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Phase 2 | Supabase → Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Phase 2 | **server-only**; used by webhooks / admin / seeding |
-| `ANTHROPIC_API_KEY` | Phase 4 | enables the Claude planner (falls back to the deterministic builder without it or on any error) — see *Turning on the Claude planner* below |
+| `ANTHROPIC_API_KEY` | Phase 4 | enables Claude: reading the plan-page sentence, and the Claude planner (falls back to Jev / the deterministic builder without it or on any error) — see *Turning on the Claude planner* and *Claude and Jev together* below. `node scripts/vercel-env.mjs` pushes it when set and skips it otherwise |
 | `TYPESAFE_API_KEY` | optional | enables the Jev planner (tried before Claude; falls back without it or on any error) — see *Turning on the Jev planner* below. `node scripts/vercel-env.mjs` pushes it when set and skips it otherwise |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Phase 3 | map pins on detail pages |
 | `PAYMENT_PROVIDER` | Phase 7 | `mock` (default) → `stripe` → `billplz` |
@@ -156,6 +156,30 @@ exactly as before. Jev's slugs are never trusted (`sanitizeBrief`), so it can't 
 5. Privacy: trip inputs (dates, group, budget, interests, the sentence and notes) and edit requests go to
    TypeSafe. Declare it with the other AI provider in Play's Data safety form (docs/play-store.md) and the
    privacy policy.
+
+## Claude and Jev together
+
+Each does what it is good at; the rules are always underneath.
+
+| Step | Who | Why |
+|---|---|---|
+| The plan-page sentence → form fields (days, start date, adults, children, budget, group, pace, interests, vetoes) | **Claude** (`readTripPrompt` in `lib/ai/claude.ts`), with Jev asked at the same time as a backup; the rules fill the form instantly first | Pulling out numbers and dates, any language or a mix ("5天4夜，5个大人一个小孩"), a group total split per person, "next Friday" |
+| Scoring each candidate place, vetoing conflicts | **Jev** | ~20 parallel typed judgements, under a second, a fraction of a cent |
+| Edit requests ("the second day is too pricey") | **Jev**, then the rules | Picking one of five edits and a day is a choice question |
+| Scheduling and pricing | The deterministic builder | No model ever sets a place, a price or a time |
+
+- **The sentence**: `interpretPrompt` (`app/(app)/plan/actions.ts`) asks Claude and Jev side by side and keeps
+  Claude's reading, then Jev's, then the rules'. Asking both at once means a slow Claude never adds its 8 s timeout
+  on top of Jev's. When the plan is generated, the vetoes Claude and Jev read in the sentence are both added to
+  Jev's brief.
+- **Model**: `AI_PROMPT_MODEL`, default `claude-sonnet-5-5` with low effort. One reading is ~800 tokens in and
+  ~300–400 out — about half a US cent on Sonnet ($2 / $10 per million tokens), about one cent per generated
+  plan (the sentence is read once on the form and once at generation). `claude-opus-5-5` reads best at about
+  twice that; `claude-haiku-5-5` costs ~0.03 cents. `npm run test:live` prints the real latency.
+- **Refusals**: the request opts into the API's server-side fallback (`fallbacks: "default"`), so a refused
+  request is re-run on another model; if it still fails the form keeps Jev's or the rules' reading.
+- **Logs**: `[ai] prompt read failed; using Jev / the rules` means users are getting the fallback.
+- **Privacy**: the sentence also goes to Anthropic (see *Turning on the Claude planner*, step 5).
 
 ## Turning on real payments (Stripe)
 

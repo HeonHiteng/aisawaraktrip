@@ -9,7 +9,7 @@ import { interpretTripPrompt, jevEnabled } from "@/lib/ai/jev";
 import { createTrip } from "@/lib/domain/trips";
 import { parseTripPrompt, type ParsedTrip } from "@/lib/plan/parse-prompt";
 import { rateLimit } from "@/lib/rate-limit";
-import { promptSchema, tripInputSchema } from "@/lib/validation/trip";
+import { parsePromptAvoid, promptSchema, tripInputSchema } from "@/lib/validation/trip";
 
 export type PlanState = { error?: string };
 
@@ -50,7 +50,9 @@ export async function generateTrip(
     notes: parsed.data.notes ?? null,
     prompt: parsed.data.prompt || null,
   };
-  const itinerary = await generateItinerary(input);
+  // what the AI already read the traveller ruling out on this page — no need to read it again
+  const promptAvoid = input.prompt ? parsePromptAvoid(formData.get("promptAvoid")) : null;
+  const itinerary = await generateItinerary(input, { promptAvoid });
   const trip = await createTrip(user.id, input, itinerary);
 
   revalidatePath("/trips");

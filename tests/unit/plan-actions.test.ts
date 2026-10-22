@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   claudeCalls: 0,
   jevCalls: 0,
   limited: false,
+  generated: [] as unknown[][],
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
@@ -22,7 +23,12 @@ vi.mock("@/lib/auth", () => ({ requireUser: async () => ({ id: "u1" }) }));
 vi.mock("@/lib/rate-limit", () => ({
   rateLimit: async () => (state.limited ? { ok: false, retryAfter: 30 } : { ok: true }),
 }));
-vi.mock("@/lib/ai/generate", () => ({ generateItinerary: async () => ({}) }));
+vi.mock("@/lib/ai/generate", () => ({
+  generateItinerary: async (...args: unknown[]) => {
+    state.generated.push(args);
+    return {};
+  },
+}));
 vi.mock("@/lib/domain/trips", () => ({ createTrip: async () => ({ id: "t1" }) }));
 vi.mock("@/lib/ai/claude", () => ({
   aiEnabled: () => state.claudeOn,
@@ -39,7 +45,7 @@ vi.mock("@/lib/ai/jev", () => ({
   },
 }));
 
-import { interpretPrompt } from "@/app/(app)/plan/actions";
+import { generateTrip, interpretPrompt } from "@/app/(app)/plan/actions";
 
 const TEXT = "5天行程，5个大人，一个小孩，budget rm1000";
 
@@ -52,6 +58,46 @@ beforeEach(() => {
     claudeCalls: 0,
     jevCalls: 0,
     limited: false,
+    generated: [],
+  });
+});
+
+const planForm = (extra: Record<string, string>) => {
+  const f = new FormData();
+  const fields: Record<string, string> = {
+    startDate: "2026-11-12",
+    endDate: "2026-11-16",
+    budgetPerPerson: "500",
+    groupType: "family",
+    numAdults: "5",
+    numChildren: "1",
+    pace: "moderate",
+    prompt: TEXT,
+    ...extra,
+  };
+  for (const [k, v] of Object.entries(fields)) f.set(k, v);
+  return f;
+};
+
+describe("generateTrip", () => {
+  it("passes the page's reading of what to leave out to the generator, so nothing reads it again", async () => {
+    const avoid = { categories: ["adventure"], slugs: ["bako-national-park"] };
+    await generateTrip({}, planForm({ promptAvoid: JSON.stringify(avoid) }));
+    expect(state.generated).toHaveLength(1);
+    expect(state.generated[0][1]).toEqual({ promptAvoid: avoid });
+  });
+
+  it("ignores a missing, malformed or out-of-shape reading", async () => {
+    for (const bad of ["", "not json", JSON.stringify({ categories: ["not-a-category"], slugs: [] }), "[1,2]"]) {
+      await generateTrip({}, planForm({ promptAvoid: bad }));
+    }
+    await generateTrip({}, planForm({}));
+    expect(state.generated.map((args) => args[1])).toEqual(Array(5).fill({ promptAvoid: null }));
+  });
+
+  it("a reading without a sentence to go with it is dropped", async () => {
+    await generateTrip({}, planForm({ prompt: "", promptAvoid: JSON.stringify({ categories: ["food"], slugs: [] }) }));
+    expect(state.generated[0][1]).toEqual({ promptAvoid: null });
   });
 });
 

@@ -122,24 +122,42 @@ describe("generateItinerary", () => {
     expect(itemsOf(it).some((i) => isShopping(i.attractionSlug))).toBe(false);
   });
 
-  it("what Claude read in the traveller's prompt is vetoed too, alongside Jev's reading", async () => {
+  it("the plan page's reading of the prompt is vetoed, and no model reads the sentence again", async () => {
     const shoppers = { ...trip, interests: ["shopping", "heritage"] as TripInput["interests"] };
     const isShopping = (slug: string | null) =>
       demoAttractions.find((a) => a.slug === slug)?.categories.includes("shopping") ?? false;
+    const prompt = "老街走走就好，商场就算了"; // the rules can't read this veto; Claude did, on the page
 
     jev.enabled = true;
-    jev.brief = { avoidSlugs: [], avoidCategories: [], preferSlugs: [], reasons: {} } satisfies Brief;
-    jev.parsed = null; // Jev missed it (it reads English best)
-    const before = await generateItinerary({ ...shoppers, prompt: "老街走走就好，商场就算了" });
-    expect(claude.promptCalls).toBe(0); // Claude is off
-    expect(itemsOf(before).some((i) => isShopping(i.attractionSlug))).toBe(true); // control
-
     claude.enabled = true;
-    claude.parsed = { avoid: { categories: ["shopping"], slugs: [] } } satisfies ParsedTrip;
-    const it = await generateItinerary({ ...shoppers, prompt: "老街走走就好，商场就算了" });
-    expect(claude.promptCalls).toBe(1);
-    expect(claude.briefCalls).toBe(0); // Jev's brief answered; Claude only read the prompt
+    jev.brief = { avoidSlugs: [], avoidCategories: [], preferSlugs: [], reasons: {} } satisfies Brief;
+    const before = await generateItinerary({ ...shoppers, prompt });
+    expect(itemsOf(before).some((i) => isShopping(i.attractionSlug))).toBe(true); // control
+    expect(jev.promptCalls).toBe(1); // no page reading: Jev reads it here (and found nothing)
+
+    jev.promptCalls = 0;
+    const it = await generateItinerary(
+      { ...shoppers, prompt },
+      { promptAvoid: { categories: ["shopping"], slugs: [] } },
+    );
+    expect(jev.promptCalls).toBe(0);
+    expect(claude.promptCalls).toBe(0); // generation never asks Claude to read the sentence
+    expect(claude.briefCalls).toBe(0); // Jev's brief answered
     expect(it.model).toBe("jev-latest");
+    expect(itemsOf(it).some((i) => isShopping(i.attractionSlug))).toBe(false);
+  });
+
+  it("the page's vetoes also apply when Claude's brief plans the trip", async () => {
+    const shoppers = { ...trip, interests: ["shopping", "heritage"] as TripInput["interests"] };
+    const isShopping = (slug: string | null) =>
+      demoAttractions.find((a) => a.slug === slug)?.categories.includes("shopping") ?? false;
+    claude.enabled = true;
+    claude.brief = { avoidSlugs: [], avoidCategories: [], preferSlugs: [], reasons: {} } satisfies Brief;
+    const it = await generateItinerary(
+      { ...shoppers, prompt: "老街走走就好，商场就算了" },
+      { promptAvoid: { categories: ["shopping"], slugs: [] } },
+    );
+    expect(it.model).toBe("claude-sonnet-5");
     expect(itemsOf(it).some((i) => isShopping(i.attractionSlug))).toBe(false);
   });
 

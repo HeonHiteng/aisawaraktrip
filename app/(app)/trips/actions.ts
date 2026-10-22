@@ -31,6 +31,7 @@ function tripInputOf(t: NonNullable<Awaited<ReturnType<typeof getTrip>>>) {
     interests: t.interests,
     pace: t.pace,
     notes: t.notes,
+    prompt: t.prompt ?? null,
   };
 }
 

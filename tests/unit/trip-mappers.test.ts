@@ -18,6 +18,7 @@ const input: TripInput = {
   interests: ["food", "culture"],
   pace: "moderate",
   notes: "no museums",
+  prompt: "3 days, family, food and culture",
 };
 
 const itinerary: Itinerary = {
@@ -95,6 +96,7 @@ const row = (over: Partial<TripRow> = {}): TripRow => ({
   interests: ["food", "not-a-category", "culture"],
   pace: "moderate",
   notes: null,
+  prompt: null,
   status: "planned",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
@@ -174,6 +176,14 @@ describe("tripFromRow", () => {
     const item = tripFromRow(row()).itinerary!.days[0].items[0];
     expect(item.attractionSlug).toBeNull();
     expect(item.attractionId).toBe("att1");
+  });
+
+  it("round-trips the traveller's prompt, and sends null when there is none", () => {
+    const sent = (tripToRpc(input) as { prompt: string | null }).prompt;
+    expect(sent).toBe("3 days, family, food and culture");
+    expect(tripFromRow(row({ prompt: sent })).prompt).toBe(input.prompt);
+    expect(tripFromRow(row()).prompt).toBeNull();
+    expect((tripToRpc({ ...input, prompt: undefined }) as Record<string, unknown>).prompt).toBeNull();
   });
 
   it("round-trips the budget through the RPC shape", () => {

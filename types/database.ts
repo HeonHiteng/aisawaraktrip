@@ -906,6 +906,7 @@ export type Database = {
           num_adults: number
           num_children: number
           pace: Database["public"]["Enums"]["trip_pace"]
+          prompt: string | null
           start_date: string
           status: Database["public"]["Enums"]["trip_status"]
           title: string
@@ -925,6 +926,7 @@ export type Database = {
           num_adults?: number
           num_children?: number
           pace?: Database["public"]["Enums"]["trip_pace"]
+          prompt?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["trip_status"]
           title?: string
@@ -944,6 +946,7 @@ export type Database = {
           num_adults?: number
           num_children?: number
           pace?: Database["public"]["Enums"]["trip_pace"]
+          prompt?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["trip_status"]
           title?: string

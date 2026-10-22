@@ -1,5 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { parseTripPrompt } from "@/lib/plan/parse-prompt";
+import { AVOID_SLUGS, cnNumber, parseTripPrompt } from "@/lib/plan/parse-prompt";
+
+describe("parseTripPrompt — Chinese", () => {
+  it("reads the descriptions travellers actually typed", () => {
+    const expected = { days: 5, numAdults: 5, numChildren: 1, groupType: "family", budgetPerPerson: 1000 };
+    expect(parseTripPrompt("5天4夜，5个大人一个小孩的trip，budget在RM1000 / person")).toMatchObject(expected);
+    expect(parseTripPrompt("5天行程，5个大人，一个小孩，budget rm1000")).toMatchObject(expected);
+  });
+
+  it("counts days, then nights + 1, and ignores 'the second day' and dates", () => {
+    expect(parseTripPrompt("三天两夜").days).toBe(3);
+    expect(parseTripPrompt("住3晚").days).toBe(4);
+    expect(parseTripPrompt("五日游").days).toBe(5);
+    expect(parseTripPrompt("第二天想轻松一点").days).toBeUndefined();
+    expect(parseTripPrompt("11月15日出发").days).toBeUndefined();
+  });
+
+  it("splits a total budget across the travellers, and reads Chinese amounts", () => {
+    expect(parseTripPrompt("三天两夜，两夫妻，总预算四千马币")).toMatchObject({
+      days: 3,
+      groupType: "couple",
+      numAdults: 2,
+      budgetPerPerson: 2000,
+    });
+    expect(parseTripPrompt("2个大人2个小孩，人均两千五").budgetPerPerson).toBe(2500);
+    expect(parseTripPrompt("预算每人大概RM800").budgetPerPerson).toBe(800);
+  });
+
+  it("reads group, pace, interests and vetoes", () => {
+    const r = parseTripPrompt("一家人，轻松一点，喜欢看猩猩和美食，不要爬山，怕坐船");
+    expect(r).toMatchObject({ groupType: "family", pace: "relaxed" });
+    expect(r.interests).toEqual(expect.arrayContaining(["wildlife", "food"]));
+    expect(r.interests).not.toContain("adventure");
+    expect(r.avoid?.categories).toEqual(["adventure"]);
+    expect(r.avoid?.slugs).toEqual([...AVOID_SLUGS.boats]);
+    expect(parseTripPrompt("和朋友去，行程紧凑").groupType).toBe("friends");
+    expect(parseTripPrompt("和朋友去，行程紧凑").pace).toBe("packed");
+  });
+
+  it("cnNumber reads digits, Chinese numerals and spoken shorthand", () => {
+    const cases: [string, number][] = [
+      ["5", 5], ["五", 5], ["十", 10], ["十二", 12], ["二十一", 21], ["两千五", 2500],
+      ["三万五", 35_000], ["一千零五", 1005], ["1.5万", 15_000], ["2k", 2000],
+    ];
+    for (const [raw, n] of cases) expect(cnNumber(raw), raw).toBe(n);
+    expect(cnNumber("abc")).toBeNaN();
+    expect(cnNumber("")).toBeNaN();
+  });
+});
 
 describe("parseTripPrompt", () => {
   it("parses the canonical example", () => {

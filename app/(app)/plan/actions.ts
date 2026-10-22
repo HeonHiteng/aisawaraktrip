@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { aiEnabled, readTripPrompt } from "@/lib/ai/claude";
 import { generateItinerary } from "@/lib/ai/generate";
 import { interpretTripPrompt, jevEnabled } from "@/lib/ai/jev";
 import { createTrip } from "@/lib/domain/trips";
@@ -56,21 +57,30 @@ export async function generateTrip(
   redirect(`/trips/${trip.id}`);
 }
 
+export type PromptReading = { parsed: ParsedTrip; source: "claude" | "jev" | "rules" };
+
 /**
  * Read the plan page's one-line description into form fields. The form has already applied the
- * rules' reading instantly; this second pass asks Jev when it's on. Never throws to the client:
+ * rules' reading instantly; this second pass asks Claude and Jev at the same time (whichever is
+ * on) and keeps Claude's reading, then Jev's, then the rules'. Asking both at once means a slow
+ * or failing Claude never adds its timeout on top of Jev's. Never throws to the client:
  * rate-limited, off, or failing, it returns the rules' reading.
  */
-export async function interpretPrompt(
-  text: string,
-): Promise<{ parsed: ParsedTrip; source: "jev" | "rules" }> {
+export async function interpretPrompt(text: string): Promise<PromptReading> {
   const user = await requireUser();
   const input = promptSchema.safeParse(text);
   if (!input.success) return { parsed: {}, source: "rules" };
-  const rules = () => ({ parsed: parseTripPrompt(input.data), source: "rules" as const });
-  if (!jevEnabled()) return rules();
+  const rules = (): PromptReading => ({ parsed: parseTripPrompt(input.data), source: "rules" });
+  const useClaude = aiEnabled();
+  const useJev = jevEnabled();
+  if (!useClaude && !useJev) return rules();
   const rl = await rateLimit(`ai:prompt:${user.id}`, 20, 60_000);
   if (!rl.ok) return rules();
-  const parsed = await interpretTripPrompt(input.data);
-  return parsed ? { parsed, source: "jev" } : rules();
+  const [fromClaude, fromJev] = await Promise.all([
+    useClaude ? readTripPrompt(input.data) : null,
+    useJev ? interpretTripPrompt(input.data) : null,
+  ]);
+  if (fromClaude) return { parsed: fromClaude, source: "claude" };
+  if (fromJev) return { parsed: fromJev, source: "jev" };
+  return rules();
 }

@@ -2,16 +2,24 @@
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowLeft,
   CalendarDays,
+  Check,
   ChevronDown,
+  Compass,
+  Heart,
   MapPin,
+  MessageSquareText,
   Minus,
   Plus,
   Sparkles,
   SlidersHorizontal,
+  User,
   Users,
+  UsersRound,
   Wallet,
   Wand2,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +30,7 @@ import { demoCategories } from "@/lib/demo/fixtures";
 import { parseTripPrompt, type ParsedTrip } from "@/lib/plan/parse-prompt";
 import { PROMPT_STARTERS } from "@/lib/plan/starters";
 import { GeneratingOverlay } from "@/components/plan/generating-overlay";
+import { CATEGORY_ICON } from "@/components/explore/category-icon";
 import {
   generateTrip,
   interpretPrompt,
@@ -51,6 +60,40 @@ const BUDGETS = [
 ];
 
 type Section = "dates" | "travellers" | "budget" | "fine" | null;
+
+/**
+ * The planner is guided first: four quick questions, a free-text box for anything extra, then a
+ * summary to check before generating. "form" is the full planner form ("More options"), which
+ * also holds every named input that posts — it stays mounted (CSS-hidden) whatever is showing.
+ */
+type Mode = "when" | "who" | "vibe" | "pace" | "extra" | "review" | "form";
+const QUESTIONS: Mode[] = ["when", "who", "vibe", "pace"];
+
+/** The guided "who" tiles, with the party each one starts from. */
+const WHO: { value: GroupType; label: string; icon: LucideIcon; adults: number; children: number }[] = [
+  { value: "solo", label: "Solo", icon: User, adults: 1, children: 0 },
+  { value: "couple", label: "Couple", icon: Heart, adults: 2, children: 0 },
+  { value: "family", label: "Family", icon: Users, adults: 2, children: 1 },
+  { value: "friends", label: "Friends", icon: UsersRound, adults: 3, children: 0 },
+];
+
+const PACE_HINT: Record<TripPace, string> = {
+  relaxed: "2–3 stops a day",
+  moderate: "A full but easy day",
+  packed: "See as much as possible",
+};
+
+const LENGTHS = [2, 3, 4, 5, 7];
+
+/** One-tap additions for the "anything extra" box. */
+const EXTRA_IDEAS = [
+  "No seafood",
+  "Vegetarian",
+  "Travelling with grandparents",
+  "Wheelchair friendly",
+  "No hiking",
+  "Love photography",
+];
 
 function addDays(iso: string, n: number) {
   const d = new Date(iso);
@@ -124,6 +167,10 @@ export function TripForm({
   const [applied, setApplied] = useState(seed != null);
   const [justApplied, setJustApplied] = useState(seed != null);
   const [openSection, setOpenSection] = useState<Section>(null);
+  // a trip sentence from a link (Home quick starts) already answers the questions: go to the summary
+  const [mode, setMode] = useState<Mode>(seed ? "review" : "when");
+  // editing one answer from the summary returns straight to it
+  const [fromReview, setFromReview] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
   // Only the latest server reading may fill the form: each request (and any edit) bumps this.
   const interpretSeq = useRef(0);
@@ -214,6 +261,70 @@ export function TripForm({
     applyPrompt(text);
   }
 
+  // each guided screen starts at the top
+  function go(next: Mode) {
+    setMode(next);
+    window.scrollTo({ top: 0 });
+  }
+
+  /** Next on a question: the following one, or straight back to the summary when editing. */
+  function advance(next: Mode) {
+    if (fromReview) {
+      setFromReview(false);
+      go("review");
+    } else {
+      go(next);
+    }
+  }
+
+  /** "Edit" on a summary line: open that question, and come back here after it. */
+  function edit(step: Mode) {
+    setFromReview(true);
+    go(step);
+  }
+
+  function pickWho(w: (typeof WHO)[number]) {
+    cancelInterpret();
+    setGroupType(w.value);
+    setAdults(w.adults);
+    setChildren(w.children);
+  }
+
+  function addExtra(idea: string) {
+    setPrompt((cur) => {
+      const t = cur.trim();
+      if (t.toLowerCase().includes(idea.toLowerCase())) return cur;
+      return t ? `${t.replace(/[.,]$/, "")}, ${idea.toLowerCase()}` : idea;
+    });
+    setApplied(false);
+  }
+
+  /**
+   * End of the guided path → the summary. The extra box is the traveller's own words (posted as
+   * the trip `prompt`, which Claude / Jev read when the plan is generated). The tapped answers
+   * stand as given; from the words we only take what they rule out ("no seafood", "no hiking"),
+   * read on the server now so generating doesn't read the sentence again (`promptAvoid`).
+   */
+  function finishGuided() {
+    setFromReview(false);
+    readAvoidOnServer(prompt);
+    go("review");
+  }
+
+  function readAvoidOnServer(text: string) {
+    const t = text.trim();
+    const minLength = /[㐀-鿿]/.test(t) ? 4 : 12;
+    if (t.length < minLength || t === lastInterpreted.current) return;
+    lastInterpreted.current = t;
+    const id = ++interpretSeq.current;
+    interpretPrompt(t)
+      .then((r) => {
+        if (id !== interpretSeq.current || r.source === "rules") return;
+        setServerAvoid({ text: t, avoid: r.parsed.avoid ?? { categories: [], slugs: [] } });
+      })
+      .catch(() => {}); // the generate step reads it instead
+  }
+
   function toggleInterest(slug: CategorySlug) {
     setInterests((prev) => {
       const next = new Set(prev);
@@ -252,7 +363,18 @@ export function TripForm({
     <>
       {pending && <GeneratingOverlay />}
 
-      <form action={action} className="space-y-5">
+      <form action={action}>
+        {/* The planner form. Hidden (never unmounted) while the guided questions show, so every
+            value still posts and the guided answers land straight in it. */}
+        <div className={mode === "form" ? "space-y-5" : "hidden"}>
+        <button
+          type="button"
+          onClick={() => go("review")}
+          className="-ml-1 inline-flex items-center gap-1 rounded-full px-1 py-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to summary
+        </button>
         {/* Conversational entry — the fast path */}
         <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
           <p className="flex items-center gap-1.5 text-sm font-semibold">
@@ -318,6 +440,7 @@ export function TripForm({
             </span>
           </div>
         </div>
+
 
         {/* Trip essentials — compact, tap any row to change it */}
         <div>
@@ -574,6 +697,256 @@ export function TripForm({
         <p className="text-center text-xs text-muted-foreground">
           The plan only uses real, verified Sarawak attractions and experiences.
         </p>
+        </div>
+
+        {/* ---------- guided path ---------- */}
+        <GuidedStep
+          active={mode === "when"}
+          step={0}
+          title="When are you going?"
+          onBack={fromReview ? () => advance("review") : undefined}
+          onNext={() => advance("who")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="g-start">Arriving</Label>
+            <Input
+              id="g-start"
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                const s = e.target.value;
+                if (!s) return;
+                cancelInterpret();
+                setEndDate(addDays(s, nightsBetween(startDate, endDate)));
+                setStartDate(s);
+              }}
+              className="h-11 rounded-xl px-3.5"
+              disabled={pending}
+            />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">For how long?</p>
+            <div className="flex flex-wrap gap-2">
+              {LENGTHS.map((n) => (
+                <ChoiceChip
+                  key={n}
+                  on={nights + 1 === n}
+                  onClick={() => {
+                    cancelInterpret();
+                    setEndDate(addDays(startDate, n - 1));
+                  }}
+                >
+                  {n} days
+                </ChoiceChip>
+              ))}
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">{datesSummary}</p>
+        </GuidedStep>
+
+        <GuidedStep
+          active={mode === "who"}
+          step={1}
+          title="Who's coming?"
+          onBack={() => go("when")}
+          onNext={() => advance("vibe")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            {WHO.map((w) => (
+              <ChoiceTile
+                key={w.value}
+                on={groupType === w.value}
+                onClick={() => pickWho(w)}
+                icon={w.icon}
+                label={w.label}
+              />
+            ))}
+          </div>
+          {(groupType === "family" || groupType === "friends") && (
+            <div className="grid grid-cols-2 gap-3 rounded-2xl border border-border p-3">
+              <Stepper label="Adults" value={adults} min={1} onChange={setAdults} disabled={pending} />
+              <Stepper label="Children" value={children} min={0} onChange={setChildren} disabled={pending} />
+            </div>
+          )}
+        </GuidedStep>
+
+        <GuidedStep
+          active={mode === "vibe"}
+          step={2}
+          title="What are you into?"
+          hint="Pick as many as you like."
+          onBack={() => go("who")}
+          onNext={() => advance("pace")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            {demoCategories.map((c) => (
+              <ChoiceTile
+                key={c.slug}
+                on={interests.has(c.slug)}
+                onClick={() => {
+                  cancelInterpret();
+                  toggleInterest(c.slug);
+                }}
+                icon={CATEGORY_ICON[c.slug]}
+                label={c.name}
+              />
+            ))}
+          </div>
+        </GuidedStep>
+
+        <GuidedStep
+          active={mode === "pace"}
+          step={3}
+          title="How full should your days be?"
+          onBack={() => go("vibe")}
+          onNext={() => advance("extra")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
+        >
+          <div className="space-y-2">
+            {PACES.map((p) => (
+              <ChoiceTile
+                key={p.value}
+                on={pace === p.value}
+                onClick={() => {
+                  cancelInterpret();
+                  setPace(p.value);
+                }}
+                label={p.label}
+                sub={PACE_HINT[p.value]}
+              />
+            ))}
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Budget per person</p>
+            <div className="grid grid-cols-3 gap-2">
+              {BUDGETS.map((b) => (
+                <ChoiceTile
+                  key={b.value}
+                  on={budget === b.value}
+                  onClick={() => {
+                    cancelInterpret();
+                    setBudget(b.value);
+                  }}
+                  label={b.label}
+                  sub={b.sub}
+                />
+              ))}
+            </div>
+          </div>
+        </GuidedStep>
+
+        <GuidedStep
+          active={mode === "extra"}
+          step={4}
+          title="Anything else we should know?"
+          hint="Optional. Food, mobility, places to skip, things you love: write it your way."
+          onBack={() => go("pace")}
+          onNext={finishGuided}
+          nextLabel={fromReview ? "Back to summary" : "Review my trip"}
+        >
+          <Textarea
+            aria-label="Anything else for your trip"
+            value={prompt}
+            onChange={(e) => {
+              setPrompt(e.target.value);
+              setApplied(false);
+              cancelInterpret();
+            }}
+            rows={4}
+            maxLength={300}
+            placeholder="No seafood, travelling with my mum who can't walk far, we'd love a sunset spot"
+            className="bg-background text-base"
+            disabled={pending}
+          />
+          <div className="flex flex-wrap gap-2" aria-label="Quick additions">
+            {EXTRA_IDEAS.map((idea) => (
+              <button
+                key={idea}
+                type="button"
+                onClick={() => addExtra(idea)}
+                disabled={pending}
+                className="inline-flex min-h-9 items-center gap-1 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <Plus className="size-3" aria-hidden />
+                {idea}
+              </button>
+            ))}
+          </div>
+        </GuidedStep>
+
+        {/* ---------- summary: check the answers, then generate ---------- */}
+        <section className={mode === "review" ? "space-y-5" : "hidden"} aria-labelledby="trip-summary">
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+              Your trip
+            </p>
+            <h2 id="trip-summary" className="mt-1 text-2xl font-bold tracking-tight">
+              Ready to plan?
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Check your answers. Our AI planner builds a day-by-day plan from real, verified
+              Sarawak places.
+            </p>
+          </div>
+
+          <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+            <SummaryRow icon={CalendarDays} label="When" value={datesSummary} onEdit={() => edit("when")} />
+            <SummaryRow icon={Users} label="Who" value={travellersSummary} onEdit={() => edit("who")} />
+            <SummaryRow
+              icon={Compass}
+              label="Into"
+              value={interestNames.length ? interestNames.join(", ") : "A bit of everything"}
+              onEdit={() => edit("vibe")}
+            />
+            <SummaryRow
+              icon={Wallet}
+              label="Pace and budget"
+              value={`${paceLabel} pace · ${budgetSummary}`}
+              onEdit={() => edit("pace")}
+            />
+            <SummaryRow
+              icon={MessageSquareText}
+              label="Anything else"
+              value={prompt.trim() || "Nothing added"}
+              muted={!prompt.trim()}
+              onEdit={() => edit("extra")}
+            />
+          </dl>
+
+          {state.error && (
+            <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+
+          <div className="space-y-2">
+            <Button
+              type="submit"
+              disabled={pending}
+              variant="brand"
+              className="h-12 w-full rounded-full"
+              size="lg"
+            >
+              <Sparkles className="size-4" />
+              {pending ? "Building your itinerary…" : "Generate my trip"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Planned by AI from real, verified Sarawak places.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go("form")}
+            className="mx-auto flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden />
+            More options: trip name, exact dates, notes
+          </button>
+        </section>
       </form>
     </>
   );
@@ -692,6 +1065,186 @@ function Stepper({
           <Plus className="size-3.5" aria-hidden />
         </button>
       </div>
+    </div>
+  );
+}
+
+/** One screen of the guided path: progress, the question, its choices, Back / Next. */
+function GuidedStep({
+  active,
+  step,
+  title,
+  hint,
+  onBack,
+  onNext,
+  nextLabel,
+  children,
+}: {
+  active: boolean;
+  /** 0–3 are the four questions; 4 is the optional "anything else" box */
+  step: number;
+  title: string;
+  hint?: string;
+  /** omitted on the first question */
+  onBack?: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  children: ReactNode;
+}) {
+  const question = step < QUESTIONS.length;
+  return (
+    <section className={active ? "space-y-5" : "hidden"} aria-labelledby={`guided-${step}`}>
+      <div className="flex gap-1.5" aria-hidden>
+        {QUESTIONS.map((q, i) => (
+          <span
+            key={q}
+            className={cn("h-1 flex-1 rounded-full", i <= step ? "bg-primary" : "bg-border")}
+          />
+        ))}
+      </div>
+      <div>
+        <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+          {question ? `Question ${step + 1} of ${QUESTIONS.length}` : "Last step · optional"}
+        </p>
+        <h2 id={`guided-${step}`} className="mt-1 text-2xl font-bold tracking-tight">
+          {title}
+        </h2>
+        {hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
+      </div>
+      {children}
+      <div className="flex gap-2 pt-2">
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-12 flex-1 rounded-full"
+            onClick={onBack}
+          >
+            Back
+          </Button>
+        )}
+        <Button type="button" size="lg" className="h-12 flex-[2] rounded-full" onClick={onNext}>
+          {nextLabel ?? "Next"}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** A big tappable choice for the guided path (single or multi select via `on`). */
+function ChoiceTile({
+  on,
+  onClick,
+  icon: Icon,
+  label,
+  sub,
+}: {
+  on: boolean;
+  onClick: () => void;
+  icon?: LucideIcon;
+  label: string;
+  sub?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-14 w-full items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        on ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-accent",
+      )}
+    >
+      {Icon && (
+        <span
+          aria-hidden
+          className={cn(
+            "grid size-9 shrink-0 place-items-center rounded-full",
+            on ? "bg-primary text-primary-foreground" : "bg-accent text-primary",
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">{label}</span>
+        {sub && <span className="block text-xs text-muted-foreground">{sub}</span>}
+      </span>
+      {on && !Icon && <Check className="size-4 shrink-0 text-primary" aria-hidden />}
+    </button>
+  );
+}
+
+/** A pill toggle: unselected outline, selected solid violet with a check. */
+function ChoiceChip({
+  on,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-9 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        on
+          ? "border-transparent bg-primary text-primary-foreground"
+          : "border-border bg-background text-muted-foreground hover:bg-accent",
+      )}
+    >
+      {on && <Check className="size-3" aria-hidden />}
+      {children}
+    </button>
+  );
+}
+
+/** One answer on the summary, with an Edit that reopens its question. */
+function SummaryRow({
+  icon: Icon,
+  label,
+  value,
+  muted,
+  onEdit,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  muted?: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span
+        aria-hidden
+        className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-accent text-primary"
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd
+          className={cn(
+            "text-sm break-words",
+            muted ? "text-muted-foreground" : "font-semibold",
+          )}
+        >
+          {value}
+        </dd>
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Edit ${label.toLowerCase()}`}
+        className="-mr-2 inline-flex min-h-9 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Edit
+      </button>
     </div>
   );
 }

@@ -55,6 +55,9 @@ test("must-see attractions carry a badge and come first", async ({ page }) => {
 test("a generated plan names real places from the guide for meals", async ({ page }) => {
   await guest(page);
   await page.goto("/plan");
+  // the planner opens on its 4 quick questions (defaults are valid), then the extra box, then the summary
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Review my trip" }).click();
   await page.getByRole("button", { name: "Generate my trip" }).click();
   await page.waitForURL(/\/trips\/[a-z0-9]+$/, { timeout: 30_000 });
   await expect(page.getByText(/(Lunch|Dinner) at /).first()).toBeVisible();

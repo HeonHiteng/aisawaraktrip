@@ -53,6 +53,9 @@ await page.goto(`${base}/plan`);
 await page.waitForLoadState("networkidle");
 await shot("4-plan");
 
+// the planner opens on its 4 quick questions (defaults are valid), then the extra box, then the summary
+for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+await page.getByRole("button", { name: "Review my trip" }).click();
 await page.getByRole("button", { name: "Generate my trip" }).click();
 await page.waitForURL(/\/trips\/[^/]+$/, { timeout: 60_000 });
 await page.waitForLoadState("networkidle");

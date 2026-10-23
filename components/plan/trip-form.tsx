@@ -2,12 +2,14 @@
 
 import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowLeft,
   CalendarDays,
   Check,
   ChevronDown,
-  Hand,
+  Compass,
   Heart,
   MapPin,
+  MessageSquareText,
   Minus,
   Plus,
   Sparkles,
@@ -60,10 +62,11 @@ const BUDGETS = [
 type Section = "dates" | "travellers" | "budget" | "fine" | null;
 
 /**
- * The guided path: four quick questions, then a free-text box for anything extra, ending back on
- * the form (filled in) for a final check. "form" is the normal planner page.
+ * The planner is guided first: four quick questions, a free-text box for anything extra, then a
+ * summary to check before generating. "form" is the full planner form ("More options"), which
+ * also holds every named input that posts — it stays mounted (CSS-hidden) whatever is showing.
  */
-type Mode = "form" | "when" | "who" | "vibe" | "pace" | "extra";
+type Mode = "when" | "who" | "vibe" | "pace" | "extra" | "review" | "form";
 const QUESTIONS: Mode[] = ["when", "who", "vibe", "pace"];
 
 /** The guided "who" tiles, with the party each one starts from. */
@@ -164,7 +167,10 @@ export function TripForm({
   const [applied, setApplied] = useState(seed != null);
   const [justApplied, setJustApplied] = useState(seed != null);
   const [openSection, setOpenSection] = useState<Section>(null);
-  const [mode, setMode] = useState<Mode>("form");
+  // a trip sentence from a link (Home quick starts) already answers the questions: go to the summary
+  const [mode, setMode] = useState<Mode>(seed ? "review" : "when");
+  // editing one answer from the summary returns straight to it
+  const [fromReview, setFromReview] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
   // Only the latest server reading may fill the form: each request (and any edit) bumps this.
   const interpretSeq = useRef(0);
@@ -261,6 +267,22 @@ export function TripForm({
     window.scrollTo({ top: 0 });
   }
 
+  /** Next on a question: the following one, or straight back to the summary when editing. */
+  function advance(next: Mode) {
+    if (fromReview) {
+      setFromReview(false);
+      go("review");
+    } else {
+      go(next);
+    }
+  }
+
+  /** "Edit" on a summary line: open that question, and come back here after it. */
+  function edit(step: Mode) {
+    setFromReview(true);
+    go(step);
+  }
+
   function pickWho(w: (typeof WHO)[number]) {
     cancelInterpret();
     setGroupType(w.value);
@@ -278,12 +300,29 @@ export function TripForm({
   }
 
   /**
-   * End of the guided path: whatever was typed in the extra box is the trip sentence, read the
-   * same way as the describe box (rules now, Claude / Jev a moment later), then back to the form.
+   * End of the guided path → the summary. The extra box is the traveller's own words (posted as
+   * the trip `prompt`, which Claude / Jev read when the plan is generated). The tapped answers
+   * stand as given; from the words we only take what they rule out ("no seafood", "no hiking"),
+   * read on the server now so generating doesn't read the sentence again (`promptAvoid`).
    */
   function finishGuided() {
-    if (prompt.trim().length >= 4) applyPrompt(prompt);
-    go("form");
+    setFromReview(false);
+    readAvoidOnServer(prompt);
+    go("review");
+  }
+
+  function readAvoidOnServer(text: string) {
+    const t = text.trim();
+    const minLength = /[㐀-鿿]/.test(t) ? 4 : 12;
+    if (t.length < minLength || t === lastInterpreted.current) return;
+    lastInterpreted.current = t;
+    const id = ++interpretSeq.current;
+    interpretPrompt(t)
+      .then((r) => {
+        if (id !== interpretSeq.current || r.source === "rules") return;
+        setServerAvoid({ text: t, avoid: r.parsed.avoid ?? { categories: [], slugs: [] } });
+      })
+      .catch(() => {}); // the generate step reads it instead
   }
 
   function toggleInterest(slug: CategorySlug) {
@@ -328,6 +367,14 @@ export function TripForm({
         {/* The planner form. Hidden (never unmounted) while the guided questions show, so every
             value still posts and the guided answers land straight in it. */}
         <div className={mode === "form" ? "space-y-5" : "hidden"}>
+        <button
+          type="button"
+          onClick={() => go("review")}
+          className="-ml-1 inline-flex items-center gap-1 rounded-full px-1 py-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Back to summary
+        </button>
         {/* Conversational entry — the fast path */}
         <div className="rounded-2xl border border-primary/30 bg-primary/[0.04] p-4">
           <p className="flex items-center gap-1.5 text-sm font-semibold">
@@ -394,18 +441,6 @@ export function TripForm({
           </div>
         </div>
 
-        {/* The guided alternative to typing */}
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="h-11 w-full rounded-full"
-          onClick={() => go("when")}
-          disabled={pending}
-        >
-          <Hand className="size-4" aria-hidden />
-          Not sure what to write? Answer 4 quick questions
-        </Button>
 
         {/* Trip essentials — compact, tap any row to change it */}
         <div>
@@ -669,8 +704,9 @@ export function TripForm({
           active={mode === "when"}
           step={0}
           title="When are you going?"
-          onBack={() => go("form")}
-          onNext={() => go("who")}
+          onBack={fromReview ? () => advance("review") : undefined}
+          onNext={() => advance("who")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
         >
           <div className="space-y-1.5">
             <Label htmlFor="g-start">Arriving</Label>
@@ -714,7 +750,8 @@ export function TripForm({
           step={1}
           title="Who's coming?"
           onBack={() => go("when")}
-          onNext={() => go("vibe")}
+          onNext={() => advance("vibe")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
         >
           <div className="grid grid-cols-2 gap-2">
             {WHO.map((w) => (
@@ -741,7 +778,8 @@ export function TripForm({
           title="What are you into?"
           hint="Pick as many as you like."
           onBack={() => go("who")}
-          onNext={() => go("pace")}
+          onNext={() => advance("pace")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
         >
           <div className="grid grid-cols-2 gap-2">
             {demoCategories.map((c) => (
@@ -764,7 +802,8 @@ export function TripForm({
           step={3}
           title="How full should your days be?"
           onBack={() => go("vibe")}
-          onNext={() => go("extra")}
+          onNext={() => advance("extra")}
+          nextLabel={fromReview ? "Back to summary" : undefined}
         >
           <div className="space-y-2">
             {PACES.map((p) => (
@@ -806,7 +845,7 @@ export function TripForm({
           hint="Optional. Food, mobility, places to skip, things you love: write it your way."
           onBack={() => go("pace")}
           onNext={finishGuided}
-          nextLabel="Review my trip"
+          nextLabel={fromReview ? "Back to summary" : "Review my trip"}
         >
           <Textarea
             aria-label="Anything else for your trip"
@@ -837,6 +876,77 @@ export function TripForm({
             ))}
           </div>
         </GuidedStep>
+
+        {/* ---------- summary: check the answers, then generate ---------- */}
+        <section className={mode === "review" ? "space-y-5" : "hidden"} aria-labelledby="trip-summary">
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-primary uppercase">
+              Your trip
+            </p>
+            <h2 id="trip-summary" className="mt-1 text-2xl font-bold tracking-tight">
+              Ready to plan?
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Check your answers. Our AI planner builds a day-by-day plan from real, verified
+              Sarawak places.
+            </p>
+          </div>
+
+          <dl className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+            <SummaryRow icon={CalendarDays} label="When" value={datesSummary} onEdit={() => edit("when")} />
+            <SummaryRow icon={Users} label="Who" value={travellersSummary} onEdit={() => edit("who")} />
+            <SummaryRow
+              icon={Compass}
+              label="Into"
+              value={interestNames.length ? interestNames.join(", ") : "A bit of everything"}
+              onEdit={() => edit("vibe")}
+            />
+            <SummaryRow
+              icon={Wallet}
+              label="Pace and budget"
+              value={`${paceLabel} pace · ${budgetSummary}`}
+              onEdit={() => edit("pace")}
+            />
+            <SummaryRow
+              icon={MessageSquareText}
+              label="Anything else"
+              value={prompt.trim() || "Nothing added"}
+              muted={!prompt.trim()}
+              onEdit={() => edit("extra")}
+            />
+          </dl>
+
+          {state.error && (
+            <p className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+
+          <div className="space-y-2">
+            <Button
+              type="submit"
+              disabled={pending}
+              variant="brand"
+              className="h-12 w-full rounded-full"
+              size="lg"
+            >
+              <Sparkles className="size-4" />
+              {pending ? "Building your itinerary…" : "Generate my trip"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Planned by AI from real, verified Sarawak places.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go("form")}
+            className="mx-auto flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden />
+            More options: trip name, exact dates, notes
+          </button>
+        </section>
       </form>
     </>
   );
@@ -967,7 +1077,7 @@ function GuidedStep({
   hint,
   onBack,
   onNext,
-  nextLabel = "Next",
+  nextLabel,
   children,
 }: {
   active: boolean;
@@ -975,7 +1085,8 @@ function GuidedStep({
   step: number;
   title: string;
   hint?: string;
-  onBack: () => void;
+  /** omitted on the first question */
+  onBack?: () => void;
   onNext: () => void;
   nextLabel?: string;
   children: ReactNode;
@@ -1002,17 +1113,19 @@ function GuidedStep({
       </div>
       {children}
       <div className="flex gap-2 pt-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          className="h-12 flex-1 rounded-full"
-          onClick={onBack}
-        >
-          Back
-        </Button>
+        {onBack && (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-12 flex-1 rounded-full"
+            onClick={onBack}
+          >
+            Back
+          </Button>
+        )}
         <Button type="button" size="lg" className="h-12 flex-[2] rounded-full" onClick={onNext}>
-          {nextLabel}
+          {nextLabel ?? "Next"}
         </Button>
       </div>
     </section>
@@ -1088,5 +1201,50 @@ function ChoiceChip({
       {on && <Check className="size-3" aria-hidden />}
       {children}
     </button>
+  );
+}
+
+/** One answer on the summary, with an Edit that reopens its question. */
+function SummaryRow({
+  icon: Icon,
+  label,
+  value,
+  muted,
+  onEdit,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  muted?: boolean;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span
+        aria-hidden
+        className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-accent text-primary"
+      >
+        <Icon className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd
+          className={cn(
+            "text-sm break-words",
+            muted ? "text-muted-foreground" : "font-semibold",
+          )}
+        >
+          {value}
+        </dd>
+      </div>
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Edit ${label.toLowerCase()}`}
+        className="-mr-2 inline-flex min-h-9 shrink-0 items-center rounded-full px-2.5 text-xs font-semibold text-primary hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        Edit
+      </button>
+    </div>
   );
 }

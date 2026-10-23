@@ -93,6 +93,9 @@ test("traveller journey: explore → plan → refine → book → pay → review
 
   // ---- plan + refine ----
   await page.goto("/plan");
+  // the planner opens on its 4 quick questions (defaults are valid), then the extra box, then the summary
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Next", exact: true }).click();
+  await page.getByRole("button", { name: "Review my trip" }).click();
   await page.getByRole("button", { name: "Generate my trip" }).click();
   await page.waitForURL(/\/trips\/[0-9a-f-]{36}$/, { timeout: 60_000 });
   tripUrl = page.url();

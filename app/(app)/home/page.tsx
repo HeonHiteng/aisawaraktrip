@@ -82,7 +82,7 @@ export default async function HomePage() {
           href="/plan"
           className="relative mt-4 flex min-h-12 items-center gap-2.5 rounded-full bg-background py-1.5 pr-1.5 pl-5 text-sm text-muted-foreground shadow-float transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
-          <span className="flex-1 truncate">Describe your trip…</span>
+          <span className="flex-1 truncate">4 quick questions, then your plan</span>
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-brand-gradient text-white">
             <ArrowRight aria-hidden className="size-4" />
             <span className="sr-only">Start planning</span>

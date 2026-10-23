@@ -134,8 +134,9 @@ and every food-guide card shows its signature dish from `/public/photos/dishes`
 (`tests/unit/photo-credits.test.ts` enforces it). Owned photos uploaded by an admin go to
 Supabase Storage (`catalogue` bucket) and need no credit.
 
-An item's own photo is used only when it is real (`isRealPhoto`: never Unsplash links or the
-old `/public/demo` files, which show unrelated places). Otherwise `coverPhoto`
+An item's own photo is used unless it is a remote Unsplash link (`isRealPhoto`). The old
+`/public/demo` files DO show as an item's own photo (founder's choice, Oct 2026), although several
+show other places — replace them with `/photos` or an admin upload for a true photo. Otherwise `coverPhoto`
 (`lib/photo-credits.ts`) gives a **stand-in** for its category (`CATEGORY_PHOTO`: generic mood
 shots from `/public/demo` such as a forest trail or a plated dish, never a photo of a different
 real landmark; empty alt text), else the riverfront (`DEFAULT_PHOTO`). Cards that point at

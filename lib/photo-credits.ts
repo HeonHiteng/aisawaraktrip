@@ -24,14 +24,13 @@ export function allPhotoCredits(): [string, PhotoCredit][] {
 }
 
 /**
- * Placeholder stock photos (Unsplash links, the old /public/demo set) are not pictures of the
- * actual place, so they never show as one. Real photos are bundled (`/photos`), uploaded by an
- * admin (Storage) or an owned link.
+ * Whether an item's own photo is shown. Remote Unsplash links never are (vendor avatars and the
+ * like). The bundled `/public/demo` set IS shown as the item's own photo, by the founder's choice
+ * (Oct 2026), even though several are stock shots of other places — swap them for `/photos` or an
+ * admin upload to get a true photo. Real photos: bundled `/photos`, admin uploads, owned links.
  */
 export function isRealPhoto(url: string | null | undefined): url is string {
-  return (
-    !!url && !url.includes("images.unsplash.com") && !url.startsWith("/demo/")
-  );
+  return !!url && !url.includes("images.unsplash.com");
 }
 
 /** A local food photo for each dish slug (see DISH_LABELS). */

@@ -60,7 +60,8 @@ describe("bundled photos", () => {
   it("every card gets a photo: its own, else a stand-in for its category, else the default", () => {
     expect(coverPhoto("/photos/niah-caves.webp", "nature")).toEqual({ src: "/photos/niah-caves.webp", own: true });
     expect(coverPhoto(null, "wildlife")).toEqual({ src: CATEGORY_PHOTO.wildlife, own: false });
-    expect(coverPhoto("/demo/fort.jpg", "heritage")).toEqual({ src: CATEGORY_PHOTO.heritage, own: false });
+    expect(coverPhoto("/demo/fort.jpg", "heritage")).toEqual({ src: "/demo/fort.jpg", own: true });
+    expect(coverPhoto("https://images.unsplash.com/x", "heritage")).toEqual({ src: CATEGORY_PHOTO.heritage, own: false });
     expect(coverPhoto(undefined)).toEqual({ src: DEFAULT_PHOTO, own: false });
     for (const url of [...Object.values(CATEGORY_PHOTO), DEFAULT_PHOTO]) expect(onDisk(url), url).toBe(true);
   });
